@@ -1,4 +1,4 @@
-\documentclass{beamer}
+\documentclass[xcolor=table]{beamer}
 \mode<presentation>
 
 \usepackage{ulem}
@@ -28,15 +28,81 @@
 
 \begin{frame}
   \frametitle{Access Control}
+  \begin{itemize}
+  \item Systems, including Operating Systems, control resources.
+  \item How do they designate who gets access to what resource?
+  \item Answer: Access Control Tables
+  \end{itemize}
+\end{frame}
 
+\begin{frame}
+  \frametitle{Example Access Control Table}
+  \begin{center}
+    \begin{tabular}{|l||c|c|c|}
+      \hline
+      &File 1&File 2&File 3\\
+      \hline
+      \hline
+      Alice&rw&rx&rwx\\
+      \hline
+      Bob&&rx&\\
+      \hline
+      Carol&r&rx&\\
+      \hline
+    \end{tabular}\\
+    \vspace{10pt}
+    \invisible{Line here for consistent spacing}
+  \end{center}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Access Control Representation}
+  How is this table actually represented?
+  \begin{itemize}
+  \item Representing the entire table is wasteful... \pause
+  \item Access Control Lists
+  \item Capabilities
+  \end{itemize}
 \end{frame}
 
 \begin{frame}
   \frametitle{Access Control Lists}
+  \begin{center}
+    \begin{tabular}{|l||c|c|c|}
+      \hline
+      &\cellcolor{green}File 1&File 2&File 3\\
+      \hline
+      \hline
+      Alice&\cellcolor{green}rw&rx&rwx\\
+      \hline
+      Bob&\cellcolor{green}&rx&\\
+      \hline
+      Carol&\cellcolor{green}r&rx&\\
+      \hline
+    \end{tabular}\\
+    \vspace{10pt}
+    ``I am File 1. Alice has rw permissions, Carol has r permissions.''
+  \end{center}
 \end{frame}
 
 \begin{frame}
   \frametitle{Capabilities}
+  \begin{center}
+    \begin{tabular}{|l||c|c|c|}
+      \hline
+      &File 1&File 2&File 3\\
+      \hline
+      \hline
+      Alice&rw&rx&rwx\\
+      \hline
+      Bob&&rx&\\
+      \hline
+      \cellcolor{green}Carol&\cellcolor{green}r&\cellcolor{green}rx&\cellcolor{green}\\
+      \hline
+    \end{tabular}\\
+    \vspace{10pt}
+    ``I am Carol, with r permissions for File 1, and rx permissions for file 2.''
+  \end{center}
 \end{frame}
 
 \begin{frame}
