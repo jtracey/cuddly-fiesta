@@ -6,16 +6,16 @@ release: main.o verify.o
 debug: main.o verify.debug.o
 	g++ main.o verify.debug.o -lcrypto -o capbac
 
-test:
+test: test.cc
 	g++ test.cc -o test
 
-main.o:
+main.o: main.cc
 	g++ -c main.cc
 
-verify.o:
+verify.o: verify.cc
 	g++ -c verify.cc
 
-verify.debug.o:
+verify.debug.o: verify.cc
 	g++ -c -DDEBUG verify.cc -o verify.debug.o
 
 clean:
