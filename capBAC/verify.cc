@@ -17,7 +17,10 @@
 
 #include "verify.h"
 
+//#define DEBUG 1
+
 // change this to INADDR_ANY if using Shadow or VMs
+// although listen_nonblock needs to be finished first for Shadow
 #define MACHINE_IP inet_addr("127.0.0.1")
 
 using namespace rapidjson;
@@ -52,6 +55,7 @@ void base64decode(BIGNUM* bn1, BIGNUM* bn2, const char* in) {
 
   return;
 }
+
 
 bool verify_outer_sig(const char* json, const unsigned char* sig, const char* su) {
   EVP_MD_CTX* mdctx;
@@ -90,6 +94,7 @@ bool verify_outer_sig(const char* json, const unsigned char* sig, const char* su
   return ret == 1;
 }
 
+
 // TODO: get key
 bool verify_inner_sig(Document* d) {
   EVP_MD_CTX* mdctx;
@@ -124,25 +129,72 @@ bool verify_inner_sig(Document* d) {
   return ret == 1;
 }
 
+
 bool is_valid(Document* d) {
-  if((*d)["ii"].GetInt() > (*d)["nb"].GetInt()) return false;
+  const char* fields[9] = {"id", "ii", "is", "su",
+			   "de","si", "ar", "nb", "na"};
+#ifdef DEBUG
+  bool ret = false;
+  for(int i=0; i < 9; i++) {
+    if(!d->HasMember(fields[i])) {
+      printf("missing \"%s\" field\n", fields[i]);
+      ret = true;
+    }
+  }
+  if(ret) return false;
+#else
+  for(int i=0; i < 9; i++) {
+    if(!d->HasMember(fields[i])) {
+      return false;
+    }
+  }
+#endif
+
+  if((*d)["ii"].GetInt() > (*d)["nb"].GetInt()) {
+#ifdef DEBUG
+    printf("DEBUG: invalid timing: ii > nb (%d > %d)\n",
+	   (*d)["ii"].GetInt(), (*d)["nb"].GetInt());
+#endif
+    return false;
+  }
   unsigned int now = time(NULL);
-  return now < (*d)["nb"].GetInt() && now > (*d)["na"].GetInt();
+  if(now < (*d)["nb"].GetInt() || now > (*d)["na"].GetInt()) {
+#ifdef DEBUG
+    printf("DEBUG: invalid timing: %d, %d, %d (nb, na, now)\n",
+	   (*d)["nb"].GetInt(), (*d)["na"].GetInt(), now);
+#endif
+    return false;
+  }
+  return true;
 }
+
 
 // TODO: make this return something meaningful
 int process_request(const char* json, const unsigned char* sig) {
+#ifdef DEBUG
+  printf("DEBUG: processing request...\n");
+#endif
   Document d;
   d.Parse(json);
-
+#ifdef DEBUG
+  printf("DEBUG: json parsed, checking validity...\n");
+#endif
   if(! is_valid(&d)) return 1;
+#ifdef DEBUG
+  printf("DEBUG: valid token, verifying signatures...\n");
+#endif
   if(! verify_outer_sig(json, sig, d["su"].GetString())) return 1;
   if(! verify_inner_sig(&d)) return 1;
+#ifdef DEBUG
+  printf("DEBUG: signatures verified.\n");
+#endif
 
   return 0;
 }
 
-int get_json(char* json, int fd) {
+
+char* get_json(int fd) {
+  char* json;
   size_t size = 162; // 162 = minimum token size
   int offset;
 
@@ -162,13 +214,21 @@ int get_json(char* json, int fd) {
 	exit(1);
       }
     }
-    if(!read(fd, json+offset, 1)) {
+    if(read(fd, json+offset, 1) <= 0) {
       printf("get_json: EOF encountered\n");
-      return 1;
+#ifdef DEBUG
+      char c = json[offset];
+      json[offset] = 0;
+      printf("story so far (%d): %s%c\n", offset, json, c);
+#endif
+      exit(1);
     }
   } while (json[offset] != 0);
 
-  return 0;
+#ifdef DEBUG
+  printf("DEBUG: get_json: json at %p: %s\n", json, json);
+#endif
+  return json;
 }
 
 
@@ -213,12 +273,12 @@ int listen_block(const char* port_s){
   int soc, fd;
   socklen_t peer_addr_size;
   char* json;
-  unsigned char sig[40];
+  unsigned char sig[80];
   uint16_t port;
 
   port = strtol(port_s, NULL, 10);
 
-  soc = socket(AF_INET, (SOCK_STREAM), 0);
+  soc = socket(AF_INET, SOCK_STREAM, 0);
   if(soc == -1) {
     printf("listen: Failed to open socket\n");
     exit(1);
@@ -242,7 +302,13 @@ int listen_block(const char* port_s){
 
   struct sockaddr_in retAddress;
   peer_addr_size = sizeof(struct sockaddr_in);
+#ifdef DEBUG
+  printf("DEBUG: entering network loop\n");
+#endif
   while(true) {
+#ifdef DEBUG
+    printf("DEBUG: network loop: accepting connection...\n");
+#endif
     fd = accept(soc, (struct sockaddr *) &retAddress, &peer_addr_size);
     if( fd == -1) {
       printf("listen: Failed to accept\n");
@@ -250,13 +316,22 @@ int listen_block(const char* port_s){
     }
 
     // TODO: do something smart when these fail
-    get_json(json, fd);
-
-    if(read(fd, sig, 40) != 40) {
+#ifdef DEBUG
+    printf("DEBUG: network loop: connection accepted, getting json...\n");
+#endif
+    json = get_json(fd);
+#ifdef DEBUG
+    printf("DEBUG: network loop: json recieved, getting sig...\n");
+#endif
+    if(read(fd, sig, 80) != 80) {
       printf("listen: EOF in sig encountered\n");
     }
+
+#ifdef DEBUG
+    printf("DEBUG: sig recieved, readying process request: %p, %p\n", json, sig);
+#endif
     if(process_request(json, sig) == 0)
-      printf("request processed");
-    else printf("process request failure");
+      printf("request processed\n");
+    else printf("request denied\n");
   }
 }
