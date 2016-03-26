@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 #include "verify.h"
+#include "base64.h"
 
 //#define DEBUG 1
 
@@ -21,39 +22,7 @@
 
 using namespace rapidjson;
 
-// takes in 56 bytes of base 64 representing two 40 bit EC points,
-// puts the values into bn1/2
-void base64decode(BIGNUM* bn1, BIGNUM* bn2, const char* in) {
-  unsigned char *buf, *bi1, *bi2;
-  BIO *bio, *b64;
-
-  buf = (unsigned char*) malloc(40);
-  if(!buf) {
-    printf("base64decode: buff malloc(40) failed\n");
-    exit(1);
-  }
-  b64 = BIO_new(BIO_f_base64());
-  bio = BIO_new_mem_buf((void*) in, 56);
-  BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL);
-  BIO_push(b64, bio);
-  BIO_read(bio, buf, 56);
-  BIO_free_all(b64);
-
-  bi1 = buf;
-  bi2 = buf+20;
-  bn1 = BN_bin2bn(bi1, 20, NULL);
-  bn2 = BN_bin2bn(bi2, 20, NULL);
-  free(buf);
-  if(!bn1 || !bn2) {
-    printf("base64decode: BN_new() failure\n");
-    exit(1);
-  }
-
-  return;
-}
-
-
-bool verify_outer_sig(const char* json, const unsigned char* sig, const char* su) {
+bool verify_outer_sig(const char* json, const unsigned char* sig, char* su) {
   EVP_MD_CTX* mdctx;
   const EVP_MD* md;
   unsigned char md_value[EVP_MAX_MD_SIZE];
@@ -62,31 +31,68 @@ bool verify_outer_sig(const char* json, const unsigned char* sig, const char* su
   EC_KEY* key;
   BIGNUM *x, *y;
 
-  md = EVP_get_digestbyname("sha256");
-  if(!md) {
-    printf("verify_outser_sig: Unknown message digest\n");
+  // TODO: decide on a curve here
+  key = EC_KEY_new_by_curve_name(NID_X9_62_prime192v3);
+  if(!key) {
+    printf("verify_outer_sig: Failed to create key\n");
     exit(1);
   }
-
-  // TODO: decide on a curve here
-  key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
-  if(!key) {
-    printf("verify_outser_sig: Failed to create key\n");
+#ifdef DEBUG
+  printf("DEBUG: verify_outer_sig: key created, parsing base64...\n");
+#endif
+  x  = BN_new();
+  y  = BN_new();
+  if(!x || !y) {
+    printf("base64decode: BN_new() failure\n");
     exit(1);
   }
   base64decode(x, y, su);
+#ifdef DEBUG
+  printf("DEBUG: verify_outer_sig: base64 parsed:\nx : %s\ny : %s\nsetting coordinates...\n", BN_bn2hex(x), BN_bn2hex(y));
+#endif
   EC_KEY_set_public_key_affine_coordinates(key, x, y);
+#ifdef DEBUG
+  printf("DEBUG: verify_outer_sig: coordinates set, preparing digest...\n");
+#endif
 
-
+  OpenSSL_add_all_digests();
+  md = EVP_get_digestbyname("sha256");
+  if(!md) {
+    printf("verify_outer_sig: Unknown message digest\n");
+    exit(1);
+  }
+  
   mdctx = EVP_MD_CTX_create();
   EVP_DigestInit_ex(mdctx, md, NULL);
   EVP_DigestUpdate(mdctx, json, strlen(json));
   EVP_DigestFinal_ex(mdctx, md_value, &md_len);
   EVP_MD_CTX_destroy(mdctx);
 
-  ret = ECDSA_verify(0, md_value, md_len, sig, 40, key);
-  free(key);
+#ifdef DEBUG
+  printf("DEBUG: verify_outer_sig: digest created, verifying sig...\n");
+#endif
+  
+  ret = ECDSA_verify(0, md_value, md_len, sig, SIGLEN, key);
+  
+#ifdef DEBUG
+  printf("DEBUG: verify_outer_sig: outer verification complete...\n");
+  printf("digest: ");
+  dump_mem(md_value, md_len);
+  BN_CTX *ctx;
+  ctx = BN_CTX_new();
+  if(!ctx) {
+    printf("failed to create bn ctx\n");
+    return 1;
+  }
+  EC_POINT_get_affine_coordinates_GFp(EC_KEY_get0_group(key),
+				      EC_KEY_get0_public_key(key),
+				      x, y, ctx);
+  BN_CTX_free(ctx);
+  printf("x : %s\ny : %s\n",
+	 BN_bn2hex(x), BN_bn2hex(y));
+#endif
 
+  free(key);
   return ret == 1;
 }
 
@@ -99,12 +105,13 @@ bool verify_inner_sig(Document* d) {
   unsigned int md_len;
   int ret;
   EC_KEY* key;
-  char sig64[56];
+  char sig64[B64SIZE];
   ECDSA_SIG *sig;
-
+  
+  strncpy(sig64, (*d)["si"].GetString(), B64SIZE);
 
   sig = ECDSA_SIG_new();
-  base64decode(sig->r, sig->s, (*d)["si"].GetString());
+  base64decode(sig->r, sig->s, sig64);
 
   d->EraseMember(d->FindMember("si"));
 
@@ -112,6 +119,12 @@ bool verify_inner_sig(Document* d) {
   Writer<StringBuffer> writer(buffer);
   d->Accept(writer);
 
+  OpenSSL_add_all_digests();
+  md = EVP_get_digestbyname("sha256");
+  if(!md) {
+    printf("verify_inner_sig: Unknown message digest\n");
+    exit(1);
+  }
   mdctx = EVP_MD_CTX_create();
   EVP_DigestInit_ex(mdctx, md, NULL);
   EVP_DigestUpdate(mdctx, buffer.GetString(), buffer.GetSize());
@@ -179,7 +192,12 @@ int process_request(const char* json, const unsigned char* sig) {
 #ifdef DEBUG
   printf("DEBUG: valid token, verifying signatures...\n");
 #endif
-  if(! verify_outer_sig(json, sig, d["su"].GetString())) return 1;
+  char su[B64SIZE];
+  strncpy(su, d["su"].GetString(), B64SIZE);  
+  if(! verify_outer_sig(json, sig, su)) return 1;
+#ifdef DEBUG
+  printf("DEBUG: outer sig verified...\n");
+#endif
   if(! verify_inner_sig(&d)) return 1;
 #ifdef DEBUG
   printf("DEBUG: signatures verified.\n");
@@ -191,7 +209,7 @@ int process_request(const char* json, const unsigned char* sig) {
 
 char* get_json(int fd) {
   char* json;
-  size_t size = 162; // 162 = minimum token size
+  size_t size = TOKENSIZE;
   int offset;
 
   json = (char*) realloc(NULL, sizeof(char)*size);
@@ -269,7 +287,7 @@ int listen_block(const char* port_s){
   int soc, fd;
   socklen_t peer_addr_size;
   char* json;
-  unsigned char sig[80];
+  unsigned char sig[SIGLEN];
   uint16_t port;
 
   port = strtol(port_s, NULL, 10);
@@ -319,7 +337,7 @@ int listen_block(const char* port_s){
 #ifdef DEBUG
     printf("DEBUG: network loop: json recieved, getting sig...\n");
 #endif
-    if(read(fd, sig, 80) != 80) {
+    if(read(fd, sig, SIGLEN) != SIGLEN) {
       printf("listen: EOF in sig encountered\n");
     }
 
