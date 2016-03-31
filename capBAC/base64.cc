@@ -12,18 +12,16 @@ void dump_mem(const unsigned char* buf, int n) {
   printf("\n");
 }
 
-
-
 void encode(char out[B64SIZE], const unsigned char* input) {
   char* c = out;
   int cnt = 0;
   base64_encodestate s;
-  
+
   base64_init_encodestate(&s);
   cnt = base64_encode_block((char *) input, BINSIZE, c, &s);
   c += cnt;
   cnt = base64_encode_blockend(c, &s);
-  
+
   return;
 }
 
@@ -31,10 +29,10 @@ void decode(unsigned char out[BINSIZE], const char* input) {
   char* c =  (char*) out;
   int cnt = 0;
   base64_decodestate s;
-  
+
   base64_init_decodestate(&s);
   cnt = base64_decode_block(input, B64SIZE, c, &s);
-  
+
   return;
 }
 
@@ -51,7 +49,7 @@ void base64encode(char out[B64SIZE], const BIGNUM* bn1, BIGNUM* bn2) {
   r1 = BN_bn2bin(bn1, bi1);
   r2 = BN_bn2bin(bn2, bi2);
   printf("r1: %d, r2:%d\n", r1, r2);
-  
+
   if((r1 == 0) || (r2 == 0)) {
     printf("error writing bn to binary\n");
     exit(1);
@@ -74,7 +72,6 @@ void base64decode(BIGNUM* bn1, BIGNUM* bn2, char* in) {
   bi2 = buf + 24;
   BN_bin2bn(bi1, 24, bn1);
   BN_bin2bn(bi2, 24, bn2);
-  
+
   return;
 }
-

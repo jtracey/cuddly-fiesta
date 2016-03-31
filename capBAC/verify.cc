@@ -22,7 +22,7 @@
 
 using namespace rapidjson;
 
-bool verify_outer_sig(const char* json, const unsigned char* sig, char* su) {
+bool verify_outer_sig(const char* json, const unsigned char* sig, int sig_len, char* su) {
   EVP_MD_CTX* mdctx;
   const EVP_MD* md;
   unsigned char md_value[EVP_MAX_MD_SIZE];
@@ -61,7 +61,7 @@ bool verify_outer_sig(const char* json, const unsigned char* sig, char* su) {
     printf("verify_outer_sig: Unknown message digest\n");
     exit(1);
   }
-  
+
   mdctx = EVP_MD_CTX_create();
   EVP_DigestInit_ex(mdctx, md, NULL);
   EVP_DigestUpdate(mdctx, json, strlen(json));
@@ -71,9 +71,9 @@ bool verify_outer_sig(const char* json, const unsigned char* sig, char* su) {
 #ifdef DEBUG
   printf("DEBUG: verify_outer_sig: digest created, verifying sig...\n");
 #endif
-  
-  ret = ECDSA_verify(0, md_value, md_len, sig, SIGLEN, key);
-  
+
+  ret = ECDSA_verify(0, md_value, 32, sig, sig_len, key);
+
 #ifdef DEBUG
   printf("DEBUG: verify_outer_sig: outer verification complete...\n");
   printf("digest: ");
@@ -107,7 +107,7 @@ bool verify_inner_sig(Document* d) {
   EC_KEY* key;
   char sig64[B64SIZE];
   ECDSA_SIG *sig;
-  
+
   strncpy(sig64, (*d)["si"].GetString(), B64SIZE);
 
   sig = ECDSA_SIG_new();
@@ -131,7 +131,8 @@ bool verify_inner_sig(Document* d) {
   EVP_DigestFinal_ex(mdctx, md_value, &md_len);
   EVP_MD_CTX_destroy(mdctx);
 
-  ret = ECDSA_do_verify(md_value, md_len, sig, key);
+  // stop from segfaulting until we implement getting key
+  //ret = ECDSA_do_verify(md_value, 32, sig, key);
 
   ECDSA_SIG_free(sig);
 
@@ -179,7 +180,7 @@ bool is_valid(Document* d) {
 
 
 // TODO: make this return something meaningful
-int process_request(const char* json, const unsigned char* sig) {
+int process_request(const char* json, const unsigned char* sig, int sig_len) {
 #ifdef DEBUG
   printf("DEBUG: processing request...\n");
 #endif
@@ -193,8 +194,8 @@ int process_request(const char* json, const unsigned char* sig) {
   printf("DEBUG: valid token, verifying signatures...\n");
 #endif
   char su[B64SIZE];
-  strncpy(su, d["su"].GetString(), B64SIZE);  
-  if(! verify_outer_sig(json, sig, su)) return 1;
+  strncpy(su, d["su"].GetString(), B64SIZE);
+  if(! verify_outer_sig(json, sig, sig_len, su)) return 1;
 #ifdef DEBUG
   printf("DEBUG: outer sig verified...\n");
 #endif
@@ -284,7 +285,7 @@ int listen_nonblock(uint16_t port){
 
 
 int listen_block(const char* port_s){
-  int soc, fd;
+  int soc, fd, sig_len;
   socklen_t peer_addr_size;
   char* json;
   unsigned char sig[SIGLEN];
@@ -337,14 +338,12 @@ int listen_block(const char* port_s){
 #ifdef DEBUG
     printf("DEBUG: network loop: json recieved, getting sig...\n");
 #endif
-    if(read(fd, sig, SIGLEN) != SIGLEN) {
-      printf("listen: EOF in sig encountered\n");
-    }
+    sig_len = read(fd, sig, SIGLEN);
 
 #ifdef DEBUG
     printf("DEBUG: sig recieved, readying process request: %p, %p\n", json, sig);
 #endif
-    if(process_request(json, sig) == 0)
+    if(process_request(json, sig, sig_len) == 0)
       printf("request processed\n");
     else printf("request denied\n");
   }

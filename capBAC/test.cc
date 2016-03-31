@@ -20,7 +20,7 @@
 
 using namespace rapidjson;
 
-int test_net(const char* message, const unsigned char* sig){
+int test_net(const char* message, const unsigned char* sig, int sig_len){
   int soc;
   uint16_t port = PORT;
 
@@ -41,7 +41,7 @@ int test_net(const char* message, const unsigned char* sig){
       printf("failed to write to socket\n");
       return 1;
   }
-  if(write(soc, sig, SIGLEN) < 0) {
+  if(write(soc, sig, sig_len) < 0) {
       printf("failed to write to socket\n");
       return 1;
   }
@@ -119,7 +119,6 @@ int test_sigs() {
   d.AddMember("na", na, d.GetAllocator());
   d.AddMember("si", "fake inner sig........................................56", d.GetAllocator());
 
-  
   StringBuffer buffer;
   Writer<StringBuffer> writer(buffer);
   d.Accept(writer);
@@ -140,34 +139,42 @@ int test_sigs() {
   printf("key size: %d\n", buf_len);
   sig = (unsigned char*) OPENSSL_malloc(buf_len);
 
-  if (ECDSA_sign(0, md_value, md_len, sig, &buf_len, eckey) == 0) {
+  if (!ECDSA_sign(0, md_value, md_len, sig, &buf_len, eckey)) {
     printf("Signing failed\n");
     return 1;
   }
 
   printf("digest: ");
   dump_mem(md_value, md_len);
-  
+  printf("sig: ");
+  dump_mem(sig, SIGLEN);
+
+  int ret = ECDSA_verify(0, md_value, md_len, sig, buf_len, eckey);
+  printf("self-verify: %d\n", ret);
+  if(ret<0) {
+    printf("%s\n", ERR_error_string(ERR_peek_last_error(), NULL));
+    return 1;
+  }
+
+
   EC_KEY* key;
   key = EC_KEY_new_by_curve_name(NID_X9_62_prime192v3);
   if(!key) {
     printf("verify_outer_sig: Failed to create key\n");
     exit(1);
   }
-  printf("DEBUG: verify_outer_sig: key created, parsing base64: %s\n",
-	 su);
   printf("DEBUG: verify_outer_sig: base64 parsed:\nx : %s\ny : %s\nsetting coordinates...\n", BN_bn2hex(x2), BN_bn2hex(y2));
   EC_KEY_set_public_key_affine_coordinates(key, x2, y2);
   printf("DEBUG: verify_outer_sig: coordinates set...\n");
 
-  int ret = ECDSA_verify(0, md_value, md_len, sig, SIGLEN, key);
+  ret = ECDSA_verify(0, md_value, md_len, sig, buf_len, key);
   printf("internal verification ret: %d\n", ret);
   if(ret<0) {
     printf("%s\n", ERR_error_string(ERR_peek_last_error(), NULL));
     return 1;
   }
-  
-  return test_net(buffer.GetString(), sig);
+
+  return test_net(buffer.GetString(), sig, buf_len);
 }
 
 int main(){
