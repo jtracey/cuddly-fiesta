@@ -72,7 +72,7 @@ bool verify_outer_sig(const char* json, const unsigned char* sig, int sig_len, c
   printf("DEBUG: verify_outer_sig: digest created, verifying sig...\n");
 #endif
 
-  ret = ECDSA_verify(0, md_value, 32, sig, sig_len, key);
+  ret = ECDSA_verify(0, md_value, md_len, sig, sig_len, key);
 
 #ifdef DEBUG
   printf("DEBUG: verify_outer_sig: outer verification complete...\n");
@@ -98,7 +98,7 @@ bool verify_outer_sig(const char* json, const unsigned char* sig, int sig_len, c
 
 
 // TODO: get key
-bool verify_inner_sig(Document* d) {
+bool verify_inner_sig(Document* d, EC_KEY* keys[]) {
   EVP_MD_CTX* mdctx;
   const EVP_MD* md;
   unsigned char md_value[EVP_MAX_MD_SIZE];
@@ -131,11 +131,16 @@ bool verify_inner_sig(Document* d) {
   EVP_DigestFinal_ex(mdctx, md_value, &md_len);
   EVP_MD_CTX_destroy(mdctx);
 
-  // stop from segfaulting until we implement getting key
-  //ret = ECDSA_do_verify(md_value, 32, sig, key);
+  ret = ECDSA_do_verify(md_value, md_len, sig, keys[0]);
+
+#ifdef DEBUG
+  printf("inner verify is verifying: %s\n", buffer.GetString());
+  printf("inner digest: ");
+  dump_mem(md_value, md_len);
+  printf("inner sig: %s, %s\n", BN_bn2hex(sig->r), BN_bn2hex(sig->s));
+#endif
 
   ECDSA_SIG_free(sig);
-
   return ret == 1;
 }
 
@@ -180,7 +185,7 @@ bool is_valid(Document* d) {
 
 
 // TODO: make this return something meaningful
-int process_request(const char* json, const unsigned char* sig, int sig_len) {
+int process_request(const char* json, const unsigned char* sig, int sig_len, EC_KEY* authority_keys[]) {
 #ifdef DEBUG
   printf("DEBUG: processing request...\n");
 #endif
@@ -199,7 +204,7 @@ int process_request(const char* json, const unsigned char* sig, int sig_len) {
 #ifdef DEBUG
   printf("DEBUG: outer sig verified...\n");
 #endif
-  if(! verify_inner_sig(&d)) return 1;
+  if(! verify_inner_sig(&d, authority_keys)) return 1;
 #ifdef DEBUG
   printf("DEBUG: signatures verified.\n");
 #endif
@@ -291,8 +296,33 @@ int listen_block(const char* port_s){
   unsigned char sig[SIGLEN];
   uint16_t port;
 
-  port = strtol(port_s, NULL, 10);
+  int auth_key_count = 1;
+  EC_KEY* authority_keys[auth_key_count];
+  EC_POINT* point_buffer;
+  BN_CTX *ctx;
 
+  ctx = BN_CTX_new();
+  if(!ctx) {
+    printf("failed to create bn ctx\n");
+    return 1;
+  }
+
+  for(int i = 0; i < auth_key_count; i++) {
+    authority_keys[i]= EC_KEY_new_by_curve_name(NID_X9_62_prime192v3);
+    if (authority_keys[i] == NULL) {
+      printf("failed to initialize curve\n");
+      return 1;
+    }
+  }
+
+  //const char private_key[] = "F2506E09D4153EED5ACBE1D620C93CA0D5580EF41AC0A401";
+  const char public_key[] = "027134EE605CB10FAE017BDD9FD88C96C8C080F08271637BB1";
+  EC_KEY_set_public_key(authority_keys[0],
+			EC_POINT_hex2point(EC_KEY_get0_group(authority_keys[0]),
+					   public_key, NULL, ctx));
+  BN_CTX_free(ctx);
+
+  port = strtol(port_s, NULL, 10);
   soc = socket(AF_INET, SOCK_STREAM, 0);
   if(soc == -1) {
     printf("listen: Failed to open socket\n");
@@ -343,7 +373,7 @@ int listen_block(const char* port_s){
 #ifdef DEBUG
     printf("DEBUG: sig recieved, readying process request: %p, %p\n", json, sig);
 #endif
-    if(process_request(json, sig, sig_len) == 0)
+    if(process_request(json, sig, sig_len, authority_keys) == 0)
       printf("request processed\n");
     else printf("request denied\n");
   }

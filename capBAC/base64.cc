@@ -48,7 +48,6 @@ void base64encode(char out[B64SIZE], const BIGNUM* bn1, BIGNUM* bn2) {
 
   r1 = BN_bn2bin(bn1, bi1);
   r2 = BN_bn2bin(bn2, bi2);
-  printf("r1: %d, r2:%d\n", r1, r2);
 
   if((r1 == 0) || (r2 == 0)) {
     printf("error writing bn to binary\n");
