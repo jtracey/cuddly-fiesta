@@ -1,0 +1,23 @@
+Mode 1 (Tagged with tag bits):
+	1. client requests capability from authority
+	2. authority gives token to client
+	3. client requests resource by sending token (w/ metadata)
+	4. resource responds
+
+Mode 2 (Tagged with type system):
+	1. client requests capability from authority
+	2. authority gives token number to client, and capbability to resource
+	3. client requests resource by sending simple token
+	4. resource looks at relevant capability metadata; responds
+
+Mode 3 (Segregated):
+	1. client requests capability from authority
+	2. authority keeps capability itself; replies with token
+	3. client requests resource via authority, sending token and identifying itself
+	4. authority establishes connection between client and resource
+
+Mode 4 (Password/sparse):
+	1. client requests capability from authority
+	2. authority keeps cap itself; replies with token and password
+	3. client requests resource via authority, sending token and password
+	4. authority establishes connection between client and resource
