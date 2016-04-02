@@ -13,10 +13,10 @@ main.o: main.cc
 	g++ -c main.cc -o main.o
 
 verify.o: verify.cc
-	g++ -c verify.cc -o verify.o
+	g++ -std=c++11 -c verify.cc -o verify.o
 
 verify.debug.o: verify.cc
-	g++ -c -DDEBUG verify.cc -o verify.debug.o
+	g++ -std=c++11 -c -DDEBUG verify.cc -o verify.debug.o
 
 base64.o: base64.cc
 	g++ -c base64.cc -o base64.o

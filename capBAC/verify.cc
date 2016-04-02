@@ -6,6 +6,9 @@
 
 #include "rapidjson/document.h"
 #include "rapidjson/prettywriter.h"
+#include <string>
+#include <unordered_map>
+#include <utility>
 
 #include <sys/epoll.h>
 #include <arpa/inet.h>
@@ -21,6 +24,8 @@
 #define MACHINE_IP inet_addr("127.0.0.1")
 
 using namespace rapidjson;
+
+typedef std::unordered_map<std::string, std::string> token_store;
 
 bool verify_outer_sig(const char* json, const unsigned char* sig, int sig_len, char* su) {
   EVP_MD_CTX* mdctx;
@@ -149,6 +154,7 @@ bool is_valid(Document* d) {
   const char* fields[9] = {"id", "ii", "is", "su",
 			   "de","si", "ar", "nb", "na"};
 #ifdef DEBUG
+  printf("checking validity\n");
   bool ret = false;
   for(int i=0; i < 9; i++) {
     if(!d->HasMember(fields[i])) {
@@ -190,7 +196,10 @@ int process_request(const char* json, const unsigned char* sig, int sig_len, EC_
   printf("DEBUG: processing request...\n");
 #endif
   Document d;
-  d.Parse(json);
+  if(d.Parse(json).HasParseError()){
+    printf("invalid json: %s\n", json);
+    return 1;
+  }
 #ifdef DEBUG
   printf("DEBUG: json parsed, checking validity...\n");
 #endif
@@ -209,6 +218,31 @@ int process_request(const char* json, const unsigned char* sig, int sig_len, EC_
   printf("DEBUG: signatures verified.\n");
 #endif
 
+  return 0;
+}
+
+unsigned char mode2_process(char record[17], token_store* capabilities, EC_KEY* authority_keys[]){
+  #ifdef DEBUG
+  printf("DEBUG: processing request, parsing request...\n");
+  #endif
+  Document d;
+  token_store::const_iterator it = capabilities->find(record);
+  if(it == capabilities->end()) return 1;
+  std::string record_s = capabilities->at(std::string(record));
+  if(d.Parse(record_s.c_str()).HasParseError()){
+    printf("invalid json: %s\n", record_s.c_str());
+    return 1;
+  }
+  #ifdef DEBUG
+  printf("DEBUG: json parsed, checking validity...\n");
+  #endif
+  if(!is_valid(&d)) {
+    capabilities->erase(it);
+    return 1;
+  }
+  #ifdef DEBUG
+  printf("DEBUG: request valid\n");
+  #endif
   return 0;
 }
 
@@ -249,6 +283,30 @@ char* get_json(int fd) {
   printf("DEBUG: get_json: json at %p: %s\n", json, json);
 #endif
   return json;
+}
+
+unsigned char store_token(char* json, token_store* capabilities, EC_KEY* authority_keys[]) {
+  Document d;
+  if(d.Parse(json).HasParseError()){
+    printf("invalid json: %s\n", json);
+    return 1;
+  }
+
+  std::pair <token_store::const_iterator, bool> result;
+  std::string id;
+
+  if(! is_valid(&d)) return 1;
+  if(! verify_inner_sig(&d, authority_keys)) return 1;
+
+  id = d["id"].GetString();
+
+  result = capabilities->insert(std::make_pair(id, std::string(json)));
+  if(!result.second) {
+    capabilities->at(id) = std::string(json);
+    printf("replacing capability %s\n", id.c_str());
+  }
+
+  return 0;
 }
 
 
@@ -323,21 +381,86 @@ int listen_block1(int soc, EC_KEY* authority_keys[]){
 #ifdef DEBUG
     printf("DEBUG: sig recieved, readying process request: %p, %p\n", json, sig);
 #endif
-    if(process_request(json, sig, sig_len, authority_keys) == 0) {
-      response = (unsigned char) 1;
-      if(write(fd, &response, 1) < 0) {
-	printf("network loop: failed to write to socket\n");
-	exit(1);
-      }
+    response = process_request(json, sig, sig_len, authority_keys);
+    if(response == 0) {
       printf("request processed\n");
     }
     else {
-      response = 0;
-      if(write(fd, &response, 1) < 0) {
+      printf("request denied\n");
+    }
+    if(write(fd, &response, 1) <= 0) {
+      printf("network loop: failed to write to socket\n");
+      exit(1);
+    }
+  }
+}
+
+int listen_block2(int soc, EC_KEY* authority_keys[]){
+  int fd, sig_len;
+  socklen_t peer_addr_size = sizeof(struct sockaddr_in);
+  char record[17];
+  char* json;
+  token_store capabilities;
+  unsigned char response;
+  struct sockaddr_in retAddress;
+
+#ifdef DEBUG
+  printf("DEBUG: entering network loop\n");
+#endif
+  while(true) {
+#ifdef DEBUG
+    printf("DEBUG: network loop: accepting connection...\n");
+#endif
+    fd = accept(soc, (struct sockaddr *) &retAddress, &peer_addr_size);
+    if( fd == -1) {
+      printf("listen: Failed to accept\n");
+      exit(1);
+    }
+
+    // TODO: do something smart when these fail
+#ifdef DEBUG
+    printf("DEBUG: network loop: connection accepted, getting record value...\n");
+#endif
+    if(read(fd, record, 17) <= 0) {
+      printf("network loop: failed to read record value\n");
+      exit(1);
+    }
+    record[16] = (char) 0;
+#ifdef DEBUG
+    printf("DEBUG: network loop: record value recieved\n");
+#endif
+    if(!strcmp(record, "")) {
+#ifdef DEBUG
+      printf("DEBUG: network loop: record is null, getting json...\n");
+#endif
+      json = get_json(fd);
+      #ifdef DEBUG
+      printf("DEBUG: network loop: json recieved, readying token store...\n");
+      #endif
+      response = store_token(json, &capabilities, authority_keys);
+      if(response == 0) {
+	printf("capability stored\n");
+      }
+      else {
+	printf("capability invalid\n");
+      }
+      if(write(fd, &response, 1) <= 0) {
 	printf("network loop: failed to write to socket\n");
 	exit(1);
       }
-      printf("request denied\n");
+    }
+    else {
+      response = mode2_process(record, &capabilities, authority_keys);
+      if(response == 0) {
+	printf("request processed\n");
+      }
+      else {
+	printf("request denied\n");
+      }
+      if(write(fd, &response, 1) <= 0) {
+	printf("network loop: failed to write to socket\n");
+	exit(1);
+      }
     }
   }
 }
@@ -410,6 +533,8 @@ void verify_run_mode(const char* argv[]) {
 
   if(!strcmp(argv[2], "1"))
     listen_block1(soc, auth_keys);
+  else if(!strcmp(argv[2], "2"))
+    listen_block2(soc, auth_keys);
   else {
     printf("Invalid mode: %s", argv[2]);
     exit(1);

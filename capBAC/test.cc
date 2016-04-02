@@ -54,6 +54,73 @@ int test_net(const char* message, const unsigned char* sig, int sig_len){
   return 0;
 }
 
+int test_net2(const char* message, const unsigned char* sig, int sig_len){
+  int soc, response=0;
+  uint16_t port = PORT;
+
+  soc = socket(AF_INET, SOCK_STREAM, 0);
+
+  struct sockaddr_in connectAddress;
+  memset(&connectAddress, 0, sizeof(connectAddress));
+  connectAddress.sin_family = AF_INET;
+  connectAddress.sin_addr.s_addr = MACHINE_IP;
+  connectAddress.sin_port = htons(port);
+
+  if(connect(soc, (struct sockaddr *) &connectAddress, sizeof(connectAddress)) < 0) {
+    printf("failed to connect: %s\n", strerror(errno));
+    return 1;
+  }
+
+  // Tell verify we are an authority by sending size 17 empty string (i.e. null bytes)
+  // (don't panic, verify checks the signature as well :) )
+  if(write(soc, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 17) < 0) {
+      printf("failed to write to socket\n");
+      return 1;
+  }
+
+  // Give the token
+  if(write(soc, message, strlen(message)+1) < 0) {
+      printf("failed to write to socket\n");
+      return 1;
+  }
+
+  // Check if the token was stored (0 good, 1 bad)
+  if(read(soc, &response, 1) < 0) {
+    printf("failed to read from socket\n");
+    return 1;
+  }
+  printf("response: %d\n", response);
+  close(soc);
+
+  // now we're a client!
+  socket(AF_INET, SOCK_STREAM, 0);
+
+  memset(&connectAddress, 0, sizeof(connectAddress));
+  connectAddress.sin_family = AF_INET;
+  connectAddress.sin_addr.s_addr = MACHINE_IP;
+  connectAddress.sin_port = htons(port);
+
+  if(connect(soc, (struct sockaddr *) &connectAddress, sizeof(connectAddress)) < 0) {
+    printf("failed to connect: %s\n", strerror(errno));
+    return 1;
+  }
+
+  // our completely random token identifier we got from the authority
+  if(write(soc, "fake identifier", 16) < 0) {
+      printf("failed to write to socket\n");
+      return 1;
+  }
+
+  // Check if the token was accepted (0 good, 1 bad)
+  if(read(soc, &response, 1) < 0) {
+    printf("failed to read from socket\n");
+    return 1;
+  }
+  printf("response: %d\n", response);
+
+  return 0;
+}
+
 int inner_sig(Document* d) {
   const char private_key[] = "F2506E09D4153EED5ACBE1D620C93CA0D5580EF41AC0A401";
   const char public_key[] = "027134EE605CB10FAE017BDD9FD88C96C8C080F08271637BB1";
@@ -256,7 +323,7 @@ int test_sigs() {
     return 1;
   }
 
-  return test_net(buffer.GetString(), sig, buf_len);
+  return test_net2(buffer.GetString(), sig, buf_len);
 }
 
 int main(){
