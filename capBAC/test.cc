@@ -21,7 +21,7 @@
 using namespace rapidjson;
 
 int test_net(const char* message, const unsigned char* sig, int sig_len){
-  int soc;
+  int soc, response=0;
   uint16_t port = PORT;
 
   soc = socket(AF_INET, SOCK_STREAM, 0);
@@ -45,6 +45,12 @@ int test_net(const char* message, const unsigned char* sig, int sig_len){
       printf("failed to write to socket\n");
       return 1;
   }
+  if(read(soc, &response, 1) < 0) {
+    printf("failed to read from socket\n");
+    return 1;
+  }
+
+  printf("response: %d\n", response);
   return 0;
 }
 

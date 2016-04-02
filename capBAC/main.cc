@@ -12,11 +12,11 @@ int main(int argc, const char* argv[]){
   }
 
   if (!strcmp(argv[1], "verify")){
-    if (argc < 3) {
-      printf("verify requires a port number argument\n");
+    if (argc < 4) {
+      printf("verify requires a mode and port number argument\n");
       return 1;
     }
-    listen_block(argv[2]);
+    verify_run_mode(argv);
   }
   else {
     printf("Invalid argument: %s\n", argv[1]);

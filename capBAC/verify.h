@@ -1,1 +1,1 @@
-int listen_block(const char* port_s);
+void verify_run_mode(const char* argv[]);

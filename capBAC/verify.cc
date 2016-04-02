@@ -289,64 +289,14 @@ int listen_nonblock(uint16_t port){
 }
 
 
-int listen_block(const char* port_s){
-  int soc, fd, sig_len;
-  socklen_t peer_addr_size;
+int listen_block1(int soc, EC_KEY* authority_keys[]){
+  int fd, sig_len;
+  socklen_t peer_addr_size = sizeof(struct sockaddr_in);
   char* json;
   unsigned char sig[SIGLEN];
-  uint16_t port;
-
-  int auth_key_count = 1;
-  EC_KEY* authority_keys[auth_key_count];
-  EC_POINT* point_buffer;
-  BN_CTX *ctx;
-
-  ctx = BN_CTX_new();
-  if(!ctx) {
-    printf("failed to create bn ctx\n");
-    return 1;
-  }
-
-  for(int i = 0; i < auth_key_count; i++) {
-    authority_keys[i]= EC_KEY_new_by_curve_name(NID_X9_62_prime192v3);
-    if (authority_keys[i] == NULL) {
-      printf("failed to initialize curve\n");
-      return 1;
-    }
-  }
-
-  //const char private_key[] = "F2506E09D4153EED5ACBE1D620C93CA0D5580EF41AC0A401";
-  const char public_key[] = "027134EE605CB10FAE017BDD9FD88C96C8C080F08271637BB1";
-  EC_KEY_set_public_key(authority_keys[0],
-			EC_POINT_hex2point(EC_KEY_get0_group(authority_keys[0]),
-					   public_key, NULL, ctx));
-  BN_CTX_free(ctx);
-
-  port = strtol(port_s, NULL, 10);
-  soc = socket(AF_INET, SOCK_STREAM, 0);
-  if(soc == -1) {
-    printf("listen: Failed to open socket\n");
-    exit(1);
-  }
-
-  struct sockaddr_in bindAddress;
-  memset(&bindAddress, 0, sizeof(bindAddress));
-  bindAddress.sin_family = AF_INET;
-  bindAddress.sin_addr.s_addr = MACHINE_IP;
-  bindAddress.sin_port = htons(port);
-
-  if(bind(soc, (struct sockaddr *) &bindAddress, sizeof(bindAddress)) == -1) {
-    printf("listen: Failed to bind\n");
-    exit(1);
-  }
-
-  if(listen(soc, 5) == -1) {
-    printf("listen: Failed to listen\n");
-    exit(1);
-  }
-
+  unsigned char response;
   struct sockaddr_in retAddress;
-  peer_addr_size = sizeof(struct sockaddr_in);
+
 #ifdef DEBUG
   printf("DEBUG: entering network loop\n");
 #endif
@@ -373,8 +323,95 @@ int listen_block(const char* port_s){
 #ifdef DEBUG
     printf("DEBUG: sig recieved, readying process request: %p, %p\n", json, sig);
 #endif
-    if(process_request(json, sig, sig_len, authority_keys) == 0)
+    if(process_request(json, sig, sig_len, authority_keys) == 0) {
+      response = (unsigned char) 1;
+      if(write(fd, &response, 1) < 0) {
+	printf("network loop: failed to write to socket\n");
+	exit(1);
+      }
       printf("request processed\n");
-    else printf("request denied\n");
+    }
+    else {
+      response = 0;
+      if(write(fd, &response, 1) < 0) {
+	printf("network loop: failed to write to socket\n");
+	exit(1);
+      }
+      printf("request denied\n");
+    }
+  }
+}
+
+int bootstrap_network(const char* port_s) {
+  int soc, fd;
+  uint16_t port;
+  struct sockaddr_in bindAddress;
+
+  port = strtol(port_s, NULL, 10);
+  soc = socket(AF_INET, SOCK_STREAM, 0);
+  if(soc == -1) {
+    printf("bootstrap: Failed to open socket\n");
+    exit(1);
+  }
+
+
+  memset(&bindAddress, 0, sizeof(bindAddress));
+  bindAddress.sin_family = AF_INET;
+  bindAddress.sin_addr.s_addr = MACHINE_IP;
+  bindAddress.sin_port = htons(port);
+
+  if(bind(soc, (struct sockaddr *) &bindAddress, sizeof(bindAddress)) == -1) {
+    printf("bootstrap: Failed to bind\n");
+    exit(1);
+  }
+
+  if(listen(soc, 5) == -1) {
+    printf("bootstrap: Failed to listen\n");
+    exit(1);
+  }
+
+  return soc;
+}
+
+EC_KEY** get_auth_keys() {
+  int auth_key_count = 1;
+  EC_KEY** authority_keys;
+  EC_POINT* point_buffer;
+  BN_CTX *ctx;
+
+  ctx = BN_CTX_new();
+  if(!ctx) {
+    printf("bootstrap: failed to create bn ctx\n");
+    exit(1);
+  }
+
+  authority_keys = (EC_KEY**) malloc(auth_key_count * sizeof(EC_KEY*));
+  for(int i = 0; i < auth_key_count; i++) {
+    authority_keys[i]= EC_KEY_new_by_curve_name(NID_X9_62_prime192v3);
+    if (authority_keys[i] == NULL) {
+      printf("bootstrap: failed to initialize curve %d\n", i);
+      exit(1);
+    }
+  }
+
+  //const char private_key[] = "F2506E09D4153EED5ACBE1D620C93CA0D5580EF41AC0A401";
+  const char public_key[] = "027134EE605CB10FAE017BDD9FD88C96C8C080F08271637BB1";
+  EC_KEY_set_public_key(authority_keys[0],
+			EC_POINT_hex2point(EC_KEY_get0_group(authority_keys[0]),
+					   public_key, NULL, ctx));
+  BN_CTX_free(ctx);
+
+  return authority_keys;
+}
+
+void verify_run_mode(const char* argv[]) {
+  EC_KEY** auth_keys = get_auth_keys();
+  int soc = bootstrap_network(argv[3]);
+
+  if(!strcmp(argv[2], "1"))
+    listen_block1(soc, auth_keys);
+  else {
+    printf("Invalid mode: %s", argv[2]);
+    exit(1);
   }
 }
