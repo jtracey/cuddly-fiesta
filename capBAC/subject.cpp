@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <sys/epoll.h>
+#include <errno.h>
 
 #include <openssl/ec.h>
 #include <openssl/bn.h>
@@ -19,6 +20,9 @@
 using namespace std;
 using namespace rapidjson;
 
+#define MACHINE_IP  inet_addr("127.0.0.2")
+#define PORT_ISSUER 200
+#define PORT_VERIFIER 202
 
 std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems) {
 	std::stringstream ss(s);
@@ -35,9 +39,163 @@ std::vector<std::string> split(const std::string &s, char delim) {
 	return elems;
 }
 
+
+int send_token(const char* message, const unsigned char* sig, int sig_len) {
+	int soc, response=0;
+	uint16_t port = PORT_VERIFIER;
+
+	soc = socket(AF_INET, SOCK_STREAM, 0);
+
+	struct sockaddr_in connectAddress;
+	memset(&connectAddress, 0, sizeof(connectAddress));
+	connectAddress.sin_family = AF_INET;
+	connectAddress.sin_addr.s_addr = MACHINE_IP;
+	connectAddress.sin_port = htons(port);
+
+	if(connect(soc, (struct sockaddr *) &connectAddress, sizeof(connectAddress)) < 0) {
+		printf("failed to connect: %s\n", strerror(errno));
+		return 1;
+	}
+
+	if(write(soc, message, strlen(message)+1) < 0) {
+		printf("failed to write to socket\n");
+		return 1;
+	}
+	if(write(soc, sig, sig_len) < 0) {
+		printf("failed to write to socket\n");
+		return 1;
+	}
+	if(read(soc, &response, 1) < 0) {
+		printf("failed to read from socket\n");
+		return 1;
+	}
+
+	printf("response: %d\n", response);
+	return 0;
+}
+
+
+int get_token(const char *resource_name, EC_KEY **ec_key)
+{	
+	int soc,response_length;
+	char *response;
+	uint16_t port = PORT_ISSUER;
+
+	soc = socket(AF_INET, SOCK_STREAM, 0);
+
+	struct sockaddr_in connectAddress;
+	memset(&connectAddress, 0, sizeof(connectAddress));
+	connectAddress.sin_family = AF_INET;
+	connectAddress.sin_addr.s_addr = MACHINE_IP;
+	connectAddress.sin_port = htons(port);
+
+
+	EC_GROUP* ec_group_new = EC_GROUP_new_by_curve_name(NID_X9_62_prime192v3);
+	const EC_GROUP *ec_group = ec_group_new;
+	const EC_POINT *ec_point = EC_KEY_get0_public_key(*ec_key);
+	BIGNUM *public_key;
+	point_conversion_form_t form = EC_GROUP_get_point_conversion_form(ec_group);
+	BN_CTX *ctx;
+	ctx = BN_CTX_new();
+	char *pub_hex = EC_POINT_point2hex(ec_group, ec_point, form, ctx);
+
+	//Create Message <Public_Key_in_Hex\nResource_Name>
+	char *message;
+	message = (char *) malloc(strlen(pub_hex) + strlen(resource_name) + 2);
+	strcat(message,pub_hex);
+	strcat(message, "\n");
+	strcat(message,resource_name);
+	printf("MESSAGE: \n%s\n",message);	
+
+	if(connect(soc, (struct sockaddr *) &connectAddress, sizeof(connectAddress)) < 0) {
+		printf("failed to connect: %s\n", strerror(errno));
+		//return 1;
+	}
+
+	if(write(soc, pub_hex, strlen(pub_hex)+1) < 0) {
+		printf("Failed to write to socket\n");
+		//return 1;
+	}
+
+	if(read(soc, &response_length, 1) < 0) {
+		printf("Failed to read RESPONSE_LENGTH from socket\n");
+		//return 1;
+	}
+	
+	if(read(soc, &response, 1) < 0) {
+		printf("Failed to read RESPONSE from socket\n");
+		//return 1;
+	}
+	
+	return 0;
+	
+}
+
+
+int send_token()
+{
+
+	int soc,response_length;
+	char *response;
+	uint16_t port = PORT_VERIFIER;
+
+	soc = socket(AF_INET, SOCK_STREAM, 0);
+
+	struct sockaddr_in connectAddress;
+	memset(&connectAddress, 0, sizeof(connectAddress));
+	connectAddress.sin_family = AF_INET;
+	connectAddress.sin_addr.s_addr = MACHINE_IP;
+	connectAddress.sin_port = htons(port);
+
+
+	EC_GROUP* ec_group_new = EC_GROUP_new_by_curve_name(NID_X9_62_prime192v3);
+	const EC_GROUP *ec_group = ec_group_new;
+	const EC_POINT *ec_point = EC_KEY_get0_public_key(*ec_key);
+	BIGNUM *public_key;
+	point_conversion_form_t form = EC_GROUP_get_point_conversion_form(ec_group);
+	BN_CTX *ctx;
+	ctx = BN_CTX_new();
+	char *pub_hex = EC_POINT_point2hex(ec_group, ec_point, form, ctx);
+
+	//Create Message <Public_Key_in_Hex\nResource_Name>
+	char *message;
+	message = (char *) malloc(strlen(pub_hex) + strlen(resource_name) + 2);
+	strcat(message,pub_hex);
+	strcat(message, "\n");
+	strcat(message,resource_name);
+	printf("MESSAGE: \n%s\n",message);	
+
+	if(connect(soc, (struct sockaddr *) &connectAddress, sizeof(connectAddress)) < 0) {
+		printf("failed to connect: %s\n", strerror(errno));
+		//return 1;
+	}
+
+	if(write(soc, pub_hex, strlen(pub_hex)+1) < 0) {
+		printf("Failed to write to socket\n");
+		//return 1;
+	}
+
+	if(read(soc, &response_length, 1) < 0) {
+		printf("Failed to read RESPONSE_LENGTH from socket\n");
+		//return 1;
+	}
+	
+	if(read(soc, &response, 1) < 0) {
+		printf("Failed to read RESPONSE from socket\n");
+		//return 1;
+	}
+	
+	return 0;
+	
+
+	// Network function to send token to Issuer
+	return 0;
+}
+
+
 int create_keypair(const char * client_name)
 {
-	
+
 	EC_KEY *ec_key = EC_KEY_new();
 	EC_GROUP* ec_group_new = EC_GROUP_new_by_curve_name(NID_X9_62_prime192v3);
 	const EC_GROUP *ec_group = ec_group_new;
@@ -51,7 +209,7 @@ int create_keypair(const char * client_name)
 	}
 
 	FILE *keys = fopen(client_name,"w"); 	
-	
+
 
 	//Save Private Key to File
 	const BIGNUM *private_key = EC_KEY_get0_private_key(ec_key);
@@ -75,6 +233,7 @@ int create_keypair(const char * client_name)
 	return 0;
 }
 
+
 int read_keypair(const char* client_name, EC_KEY **ec_key)
 {	
 	*ec_key = EC_KEY_new();
@@ -85,12 +244,12 @@ int read_keypair(const char* client_name, EC_KEY **ec_key)
 	BIGNUM *private_key_bn;
 	EC_POINT *public_key_point;
 	BN_CTX *ctx;
-	
+
 	FILE *keys = fopen(client_name,"r"); 	
 	size_t len_pub = 0, len_priv = 0;
 	char *private_key = NULL;
 	getline(&private_key, &len_priv, keys);
-	
+
 	char *public_key = NULL;
 	getline(&public_key, &len_pub, keys);
 	ctx = BN_CTX_new();
@@ -100,12 +259,12 @@ int read_keypair(const char* client_name, EC_KEY **ec_key)
 	EC_KEY_set_private_key(*ec_key,private_key_bn);
 
 	EC_KEY_set_public_key(	*ec_key, 
-				EC_POINT_hex2point(EC_KEY_get0_group(*ec_key),public_key, NULL,ctx));
-	
+			EC_POINT_hex2point(EC_KEY_get0_group(*ec_key),public_key, NULL,ctx));
+
 	/* VIEW KEYS :
-	cout << len_priv << " : " << private_key;
-	cout << len_pub << " : " << public_key;	
-	*/
+	   cout << len_priv << " : " << private_key;
+	   cout << len_pub << " : " << public_key;	
+	 */
 
 	return 0;
 }	
@@ -122,7 +281,7 @@ int sign_token(const char *token_file , EC_KEY **ec_key)
 	fseek (sign_file, 0, SEEK_END);
 	size_t srclen = ftell(sign_file);
 	fseek(sign_file, 0, SEEK_SET);	
-	
+
 	char *source = (char*) malloc(srclen);
 	fread(source, sizeof(char), srclen, sign_file);
 	cout << source; 
@@ -135,37 +294,28 @@ int sign_token(const char *token_file , EC_KEY **ec_key)
 	}
 	mdctx = EVP_MD_CTX_create();
 	EVP_DigestInit_ex(mdctx, md, NULL);
-  	EVP_DigestUpdate(mdctx, source, srclen);
- 	EVP_DigestFinal_ex(mdctx, md_value, &md_len);
-  	EVP_MD_CTX_destroy(mdctx);
-		
+	EVP_DigestUpdate(mdctx, source, srclen);
+	EVP_DigestFinal_ex(mdctx, md_value, &md_len);
+	EVP_MD_CTX_destroy(mdctx);
+
+
 	buf_len = ECDSA_size(*ec_key);
 	sig = (unsigned char*) OPENSSL_malloc(buf_len);
 	if(! ECDSA_sign(0, md_value, md_len, sig, &buf_len, *ec_key)) {
 		printf("Signing Failed \n");
 		return 1;
 	}
-	
+
 	int ret = ECDSA_verify(0, md_value, md_len, sig, buf_len, *ec_key);
 	printf("\n Ret : %d \n",ret);
 
 	return 0;
 }
 
-int get_token( )
+int access_resource( const char *resource_name, EC_KEY **ec_key)
 {
-	// Network function to get token from Issuer
-	return 0;
-}
 
-int send_token()
-{
-	// Network function to send token to Issuer
-	return 0;
-}
-int access_resource( const char * resource_name, EC_KEY **ec_key)
-{
-	get_token();
+	get_token(resource_name, ec_key);
 	sign_token( resource_name , ec_key);
 	send_token();
 	return 0;
@@ -216,7 +366,6 @@ void parse(string buffer)
 		token_iterator++;
 	}
 }
-
 
 int main(int argc, char *argv[])
 {
