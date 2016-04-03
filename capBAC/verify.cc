@@ -164,7 +164,7 @@ bool is_valid(Document* d) {
   const char* fields[9] = {"id", "ii", "is", "su",
 			   "de","si", "ar", "nb", "na"};
 #ifdef DEBUG
-  fprintf(logfile, "checking validity\n");
+  fprintf(logfile, "DEBUG: checking validity\n");
   bool ret = false;
   for(int i=0; i < 9; i++) {
     if(!d->HasMember(fields[i])) {
