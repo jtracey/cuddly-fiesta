@@ -16,13 +16,12 @@
 #include "base64.h"
 
 #define MACHINE_IP inet_addr("127.0.0.1")
-#define PORT 49152
 
 using namespace rapidjson;
 
-int test_net(const char* message, const unsigned char* sig, int sig_len){
+int test_net(const char* port_s, const char* message, const unsigned char* sig, int sig_len){
   int soc, response=0;
-  uint16_t port = PORT;
+  uint16_t port = strtol(port_s, NULL, 10);
 
   soc = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -54,9 +53,9 @@ int test_net(const char* message, const unsigned char* sig, int sig_len){
   return 0;
 }
 
-int test_net2(const char* message, const unsigned char* sig, int sig_len){
+int test_net2(const char* port_s, const char* message, const unsigned char* sig, int sig_len){
   int soc, response=0;
-  uint16_t port = PORT;
+  uint16_t port = strtol(port_s, NULL, 10);
 
   soc = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -196,7 +195,7 @@ int inner_sig(Document* d) {
   return 0;
 }
 
-int test_sigs() {
+int test_sigs(const char* port) {
   Document d;
   EC_KEY *eckey;
   char su[B64SIZE];
@@ -323,9 +322,9 @@ int test_sigs() {
     return 1;
   }
 
-  return test_net2(buffer.GetString(), sig, buf_len);
+  return test_net(port, buffer.GetString(), sig, buf_len);
 }
 
-int main(){
-  return test_sigs();
+int main(int argc, char* argv[]){
+  return test_sigs(argv[1]);
 }

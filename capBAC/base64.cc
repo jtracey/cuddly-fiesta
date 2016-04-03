@@ -44,10 +44,24 @@ void base64encode(char out[B64SIZE], const BIGNUM* bn1, BIGNUM* bn2) {
   int r1, r2;
 
   bi1 = buf;
-  bi2 = buf + 24;
+  bi2 = buf + BINSIZE/2;
 
   r1 = BN_bn2bin(bn1, bi1);
   r2 = BN_bn2bin(bn2, bi2);
+
+  if((r1 == 0) || (r2 == 0)) {
+    printf("error writing bn to binary\n");
+    exit(1);
+  }
+
+  if(r1 < BINSIZE/2) {
+    memset(bi1, 0, BINSIZE/2);
+    r1 = BN_bn2bin(bn1, bi1+(BINSIZE/2 - r1));
+  }
+  if(r2 < BINSIZE/2) {
+    memset(bi2, 0, BINSIZE/2);
+    r2 = BN_bn2bin(bn2, bi2+(BINSIZE/2 - r2));
+  }
 
   if((r1 == 0) || (r2 == 0)) {
     printf("error writing bn to binary\n");
