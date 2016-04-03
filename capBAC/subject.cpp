@@ -1,3 +1,7 @@
+//USAGE : ./name <filename_of_instructions> <PORT_NO_VERIFIER> <PORT_NO_ISSUER> 
+//compile with -lcrypto
+//For dump_mem comparison of Digests (uncomment dump_mem and compile with base64.o,cencode.o,cdecode.o) 
+
 #include <string.h>
 #include <iostream>
 #include <fstream>
@@ -22,7 +26,10 @@ using namespace rapidjson;
 
 #define MACHINE_IP  inet_addr("127.0.0.1")
 #define PORT_ISSUER  49151
-#define PORT_VERIFIER 49155
+#define PORT_VERIFIER 49157
+
+int port_verifier;
+int port_issuer;
 
 std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems) {
 	std::stringstream ss(s);
@@ -108,8 +115,8 @@ int send_token(unsigned char **sig, unsigned int *sig_len, char **json_message, 
 {
 
 	int soc,response_length;
-	char *response;
-	uint16_t port = PORT_VERIFIER;
+	char response;
+	uint16_t port = port_verifier;
 
 	soc = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -127,28 +134,30 @@ int send_token(unsigned char **sig, unsigned int *sig_len, char **json_message, 
 		printf("failed to connect: %s\n", strerror(errno));
 		//return 1;
 	}
-
+	
 	printf("SEND_TOKEN : %s",*json_message);
-	if(write(soc, *json_message, (*json_length) + 1) < 0) {
+	if(write(soc, *json_message, (*json_length)) < 0) {
 		printf("Failed to write to socket\n");
 		//return 1;
 	}
 	
-	if(write(soc, *sig, (*sig_len)+1) < 0) {
+	if(write(soc, *sig, (*sig_len)) < 0) {
 		printf("Failed to write to socket\n");
 		//return 1;
 	}
 
-	if(read(soc, &response_length, 1) < 0) {
+	if(read(soc, &response, 1) < 0) {
 		printf("Failed to read RESPONSE_LENGTH from socket\n");
 		//return 1;
 	}
 	
+	/*
 	if(read(soc, &response, 1) < 0) {
 		printf("Failed to read RESPONSE from socket\n");
 		//return 1;
 	}
-	
+	*/
+	printf("RESPONSE : %c",response);
 	return 0;	
 
 }
@@ -185,7 +194,7 @@ int create_keypair(const char * client_name)
 	point_conversion_form_t form = EC_GROUP_get_point_conversion_form(ec_group);
 	BN_CTX *ctx;
 	ctx = BN_CTX_new();
-	char *pub_hex = EC_POINT_point2hex(ec_group, public_key, form, ctx);
+	char *pub_hex = EC_POINT_point2hex(ec_group, public_key, POINT_CONVERSION_COMPRESSED, ctx);
 	printf("%s\n",pub_hex);		
 	fwrite(pub_hex,sizeof(char),strlen(pub_hex),keys);
 
@@ -245,6 +254,7 @@ int sign_token(const char *token_file , EC_KEY **ec_key, unsigned char **sig, un
 	*json_message = (char*) malloc(*json_length);
 	fread(*json_message, sizeof(char), *json_length, sign_file);
 	cout <<"Signing : " <<*json_message << endl; 
+	(*json_message)[*json_length-1] = '\0';
 
 	OpenSSL_add_all_digests();
 	md = EVP_get_digestbyname("sha256");
@@ -254,11 +264,12 @@ int sign_token(const char *token_file , EC_KEY **ec_key, unsigned char **sig, un
 	}
 	mdctx = EVP_MD_CTX_create();
 	EVP_DigestInit_ex(mdctx, md, NULL);
-	EVP_DigestUpdate(mdctx, *json_message, *json_length);
+	EVP_DigestUpdate(mdctx, *json_message, (*json_length)-1);
 	EVP_DigestFinal_ex(mdctx, md_value, &md_len);
 	EVP_MD_CTX_destroy(mdctx);
 
-
+	//dump_mem(md_value, md_len);
+	
 	*sig_len = ECDSA_size(*ec_key);
 	*sig = (unsigned char*) OPENSSL_malloc(*sig_len);
 	if(! ECDSA_sign(0, md_value, md_len, *sig, sig_len, *ec_key)) {
@@ -340,6 +351,9 @@ int main(int argc, char *argv[])
 	ifstream input_file(argv[1],std::ifstream::binary);
 	string buffer;
 
+	port_verifier = atoi(argv[2]);
+	port_issuer = atoi(argv[3]);		
+	
 	while(!input_file.eof())
 	{
 		getline(input_file, buffer);
