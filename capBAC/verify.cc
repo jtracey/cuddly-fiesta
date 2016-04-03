@@ -402,7 +402,6 @@ int listen_block1(int soc, EC_KEY* authority_keys[]){
     }
     else {
       fprintf(logfile, "request denied\n");
-      exit(1);
     }
     if(write(fd, &response, 1) <= 0) {
       fprintf(logfile, "network loop: failed to write to socket\n");
