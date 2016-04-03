@@ -1,0 +1,33 @@
+https://www.cl.cam.ac.uk/research/security/capsicum/
+
+
+ framework, extends UNIX APIs, provides new kernel primitives
+ 
+ Capsicum capabilities on FreeBSD and Linux hybridize a true capability-system model with the UNIX design and POSIX API.
+ Capsicum capabilities are a refined form of file descriptor, a delegable right between processes and additional object types beyond classic POSIX, such as processes, can be referenced via capabilities. 
+ In Capsicum capability mode, processes are unable to utilize global name spaces (such as the filesystem name space) to look up objects, and must instead inherit or be delegated them.
+ 
+ add primitives to current application in OS to support capabilities
+ 
+ cap_enter:     new system call, sets a credential flag.
+                open in capability mode
+                once set, cannot be removed.
+                can be inherited
+                restricted global OS namespace
+                
+ refine open flags on file descriptors
+ 
+ ex. appilcation a:     read input
+                        get rights to all files involved
+                        cap_enter
+                                work loop with defined capabilities
+                 
+                 gzip/ complex application:
+                        cannot access all rights before work look execution begins
+                        high level API- delegate rights/ manage files etc
+                        
+tcpdum-
+refine existing file descriptors- take away rights that are not required.
+
+apply capsicum on monolithic appilcation
+apply capsicum to map distributed distributed security to local security policies

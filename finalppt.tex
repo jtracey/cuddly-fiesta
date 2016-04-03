@@ -1,0 +1,101 @@
+\documentclass[11pt]{beamer}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{tikz}
+\usepackage{graphicx}
+\usetheme{Madrid}
+\usepackage[normalem]{ulem}
+\usepackage[absolute,overlay]{textpos}
+\usepackage{listings}
+\usepackage{courier} 
+
+\setbeamertemplate{navigation symbols}{}
+%\setbeamertemplate{footline}[frame number]
+\title[Main Title]{Main Title: very very extremely long title}
+\subtitle{subtitle}
+\author[k4iyer, ssasy, j3tracey]{K. Iyer \and S. Sasy \and J. Tracey}
+\institute[]{Cheriton School of Computer Science}
+\date{}
+
+%\AtBeginSubsection[]
+%{
+%  \begin{frame}<beamer>{Outline}
+%    \tableofcontents[currentsection,currentsubsection]
+%  \end{frame}
+%}
+
+
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\begin{frame}{Barrelfish: Overview}
+	\begin{itemize}
+	\item suitable for scalable operating systems 
+	\item multi-cores, heterogeneous architectures
+	\item similar to the seL4 model, extensions for distributed capability management between cores
+	\end{itemize}
+\end{frame}
+
+
+\begin{frame}{Barrelfish: Capabilities}
+	\begin{itemize}
+	\item kernel objects are referenced by partitioned capabilities
+	\item capabilities can be accessed and manipulated by the kernel alone
+	\item capability references: user level use system calls to access capabilities
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Barrelfish: Capability Types}
+\begin{itemize}
+\item Main Memory
+\item Page Tables 
+\item Device Memory
+\item Page tables Mapping Memory 
+\item Kernel interface
+\item Others
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}{Capability Operations Interaction}
+\begin{figure}
+		  \includegraphics[scale=0.25]{img/BL_revoke_retype}
+		  \caption{Revoke-Retype-Delete interactions}
+		  
+    \end{figure}   
+\end{frame}
+
+\begin{frame}{Capsicum: Overview}
+	\begin{itemize}
+	\item API for implementing capabilities on UNIX 
+	\item extends (not replace) standard UNIX APIs by adding kernel-level primitives
+	\item a sand-boxed capability mode, capability primitives 
+	\item as well as libcapsicum and a capability-aware run-time linker
+	\end{itemize}
+\end{frame}
+
+
+\begin{frame}{Capsicum: Working}
+	\begin{itemize}
+	\item Capability mode ($cap_enter$)
+	\item $cap_new$ system call
+	\item libcapsicum 
+	\end{itemize}
+\end{frame}
+
+\begin{frame}
+	\begin{figure}
+%		  \includegraphics[scale=0.25]{img/BL_revoke_retype}
+		  \caption{capsicum exmaple}
+		  
+    \end{figure}  
+\end{frame}
+
+
+
+\end{document}

@@ -1,0 +1,67 @@
+intro:
+Barrelfish aims to be a scalable operating system suited for running scalable parallel applications on hardware with many cores possibly of heterogeneous architectures.
+experimental computer operating system built by ETH Zurich with the assistance of Microsoft Research in Cambridge.
+
+We are exploring how to structure an OS for future multi- and many-core systems. We are motivated by two closely related trends in hardware design: first, the rapidly growing number of cores, which leads to a scalability challenge, and second, the increasing diversity in computer hardware, requiring the OS to manage and exploit heterogeneous hardware resources.
+
+Barrelfish capability model is similar to the seL4 model, with a considerably larger type system and extensions for distributed capability management between cores
+
+BL capability overview:
+Kernel objects are referenced by partitioned capabilities.  
+The actual capability can only be directly accessed and manipulated by the kernel, while user level only has access to capability references (struct capref), which are addresses in a cspace
+User level can only manipulate capabilities using kernel system calls (to which it passes capability references).
+this process is similar to the translation of a virtual address to a physical address 
+
+
+///////////
+In Barrelfish, to limit the need for synchronization in the kernel, a separate
+copy of the kernel is run on every processing core, with copies not sharing any
+resources by default. This per-core share-nothing approach is also extended to
+userspace, creating a system where each core acts as a node in a distributed
+system
+//////////
+On a single core, Barrelfish’s capability system is based on the model defined by seL4
+
+capability types:
+BL capability types are specified in Barrelfish using a domain specific language
+
+    Main Memory 
+    The equivalent of seL4’s “Untyped Memory” in Barrelfish is the RAM type. As with UM, These capabilities can be split into smaller chunks or retyped as in seL4: Frame capabilities can be mapped into virtual memory, CNodes hold capability slots, Dispatchers represent tasks with a virtual address space, capability space, scheduling parameters and more.
+
+    Page Tables 
+    In many operating systems, page faults are handled by the kernel or some other dedicated paging handler. Such a handler must therefore be able to allocate memory for the faulting application, and defines the policies employed by that application. In Barrelfish, applications have direct handles on their available memory via capabilities, making an external paging service unnecessary and problematic. Instead, applications are self-paging as described by Hand et al. [6]. By directly exposing hardware page table types in the form of individual capability types, the Barrelfish kernel is able to easily enforce correctness of application-built page tables. Additionally, applications are able to build page tables for architectures other than the one executing the code, allowing such an
+    application to build page tables for other cores in an environment with heterogeneous architectures. 
+
+    Device Memory 
+    Barrelfish RAM capabilities, the equivalent of seL4’s “untyped memory”, require that the memory be zeroed before it is read, to ensure that information is not leaked unintentionally. However, memory mapped device registers should not be arbitrarily zeroed. Therefore, mappable DevFrame capabilities have been introduced that have no such zeroing requirement. However, these capabilities cannot be derived from RAM capabilities, as one would have to first create a RAM capability, which would zero the relevant memory. To solve this, we introduce a parent type for RAM and DevFrame capabilities, the PhsyAddr type. This type represents a range of physical addresses and nothing more, and is not directly useful without being retyped first.
+
+    Page tables 
+    Mapping memory in Barrelfish is done by manipulating page table capabilities. To enforce a correct page table hierarchy, Barrelfish has a capability type for each level of page table on each architecture it supports. With support for x86_64, x86_32 and ARM, this requires nine page table types to be defined. 
+
+    Kernel interface 
+    As described in chapter 2, Barrelfish splits its kernel into a privileged and userspace part. The userspace performs privileged actions by invoking its Kernel capability.
+
+    Others 
+    Additional capability types exist for various tasks like performance monitoring and handling legacy I/O devices.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+we assume in Barrelfish that information is not shared initially
+A kernel is booted on every core, and communication channels established between kernels, in turn allowing the kernels to replicate, synchronize and manage resources between one another.
+
+
