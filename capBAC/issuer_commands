@@ -1,0 +1,4 @@
+g++ -c base64.cc -o base64.o
+g++ -c cencode.c cdecode.c
+g++ issuer3.cpp base64.o cencode.o cdecode.o -lcrypto -o issuer3
+./issuer3
