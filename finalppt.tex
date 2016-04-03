@@ -26,11 +26,173 @@
 %}
 
 
+\newcommand*\circled[1]{\tikz[baseline=(char.base)]{
+            \node[shape=circle,draw,inner sep=2pt] (char) {#1};}}
 
 \begin{document}
 
 \begin{frame}
   \titlepage
+\end{frame}
+
+\begin{frame}{Presentation Outline}
+ 	\begin{itemize}
+          \vfill
+        \item Types of Capabilities
+          \vfill
+        \item Capabilities in OSs
+          \vfill
+        \item Capabilities in Userspace
+          \vfill
+        \item Experiment Results
+          \vfill
+        \end{itemize}
+\end{frame}
+
+\begin{frame}{Types of Capabilities}
+\begin{enumerate}
+          \vfill
+    \item{tagged with bits}
+          \vfill
+    \item{tagged with type system}
+          \vfill
+    \item{segregated}
+          \vfill
+    \item{password/sparse}
+          \vfill
+\end{enumerate}
+\end{frame}
+
+\begin{frame}{Types of Capabilities: The Roles}
+  \begin{figure}[!h]
+    \centering
+    \begin{tikzpicture}
+      \node (auth)[label=authority] at (0,0) {\includegraphics[scale=.025]{gavel.jpg}};
+      \node (client)[label=client] at (-4,-4) {\includegraphics[scale=.15]{client.jpg}};
+      \node (obj)[label=object] at (4,-4) {\includegraphics[scale=.075]{resource.jpg}};
+    \end{tikzpicture}
+  \end{figure}
+\end{frame}
+
+\begin{frame}{Types of Capabilities: Tagged with Bits}
+  \begin{figure}[!h]
+    \centering
+    \begin{tikzpicture}
+      \node (auth)[label=authority] at (0,0) {\includegraphics[scale=.025]{gavel.jpg}};
+      \node (client)[label=client] at (-4,-4) {\includegraphics[scale=.15]{client.jpg}};
+      \node (obj)[label=object] at (4,-4) {\includegraphics[scale=.075]{resource.jpg}};
+
+      \draw[transform canvas={yshift=1.0ex}, draw=purple, very thick, <-] (auth) -- (client) node[above, left, midway] {?};
+      \draw[transform canvas={yshift=-1.0ex}, draw=purple, very thick, ->] (auth) -- (client) node[below, right, midway] {\circled{T}};
+      \draw[draw=purple, very thick, ->] (client) -- (obj) node[above, midway] {\circled{T}};
+    \end{tikzpicture}
+  \end{figure}
+\end{frame}
+
+\begin{frame}{Types of Capabilities: Tagged with Type System}
+  \begin{figure}[!h]
+    \centering
+    \begin{tikzpicture}
+      \node (auth)[label=authority] at (0,0) {\includegraphics[scale=.025]{gavel.jpg}};
+      \node (client)[label=client] at (-4,-4) {\includegraphics[scale=.15]{client.jpg}};
+      \node (obj)[label=object] at (4,-4) {\includegraphics[scale=.075]{resource.jpg}};
+
+      \draw[transform canvas={yshift=1.0ex}, draw=purple, very thick, <-] (auth) -- (client) node[above, left, midway] {?};
+      \draw[transform canvas={yshift=-1.0ex}, draw=purple, very thick, ->] (auth) -- (client) node[below, right, midway] {*};
+      \draw[draw=purple, very thick, ->] (auth) -- (obj) node[above, right, midway] {\circled{C}};
+      \draw[draw=purple, very thick, ->] (client) -- (obj) node[above, midway] {*};
+    \end{tikzpicture}
+  \end{figure}
+\end{frame}
+
+
+\begin{frame}{Types of Capabilities: Segregated}
+  \begin{figure}[!h]
+    \centering
+    \begin{tikzpicture}
+      \node (auth)[label=authority] at (0,0) {\includegraphics[scale=.025]{gavel.jpg}};
+      \node (client)[label=client] at (-4,-4) {\includegraphics[scale=.15]{client.jpg}};
+      \node (obj)[label=object] at (4,-4) {\includegraphics[scale=.075]{resource.jpg}};
+      \node (book) at (1.5,0) {\includegraphics[scale=0.05]{alice.jpg}};
+
+      \draw[draw=purple, very thick, <-] (auth) -- (client) node[above, left, midway] {``Alice''};
+      \draw[draw=purple, very thick, ->] (auth) -- (obj) node[above, right, midway] {``Alice''};
+    \end{tikzpicture}
+  \end{figure}
+\end{frame}
+
+\begin{frame}{Types of Capabilities: Segregated}
+  \begin{figure}[!h]
+    \centering
+    \begin{tikzpicture}
+      \node (auth)[label=authority] at (0,0) {\includegraphics[scale=.025]{gavel.jpg}};
+      \node (client)[label=client] at (-4,-4) {\includegraphics[scale=.15]{client.jpg}};
+      \node (obj)[label=object] at (4,-4) {\includegraphics[scale=.075]{resource.jpg}};
+
+      \draw[draw=purple, very thick, <-] (auth) -- (client) node[above, left, midway] {``passw0rd''};
+      \draw[draw=purple, very thick, ->] (auth) -- (obj) node[above, right, midway] {``Alice''};
+    \end{tikzpicture}
+  \end{figure}
+\end{frame}
+
+\begin{frame}{Capabilities in OSs}
+  \vfill
+  A more in-depth look at two of these OSs:
+  	\begin{itemize}
+          \vfill
+	\item L4
+	\item Barrelfish
+          \vfill
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Capabilities in OSs: L4}
+
+  	\begin{itemize}
+          \vfill
+	\item family of microkernels
+          \vfill
+	\item some use or are built on capabilities
+          \vfill
+        \item e.g. OKL4, Fiasco.OC, seL4
+          \vfill
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Capabilities in OSs: seL4}
+  \vfill
+  We focus on seL4 as the most relevant.
+  \begin{itemize}
+    \vfill
+  \item first formally verified general-purpose OS
+    \vfill
+  \item minimizes kernel objects
+    \vfill
+  \item all kernel services managed using capabilities
+    \vfill
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Capabilities in OSs: seL4}
+  The available kernel objects are categorized into:
+  \begin{itemize}
+    \vfill
+  \item capabilities (CNodes, CSpaces)
+    \vfill
+  \item object/memory management (untyped $\rightarrow$ retyped)
+    \vfill
+  \item virtual address space management (VSpace, platform-dependant)
+    \begin{itemize}
+    \item e.g. IA32: Page Directory $\rightarrow$ Page Tables $\rightarrow$ Frames
+    \end{itemize}
+    \vfill
+  \item thread management (Thread Control Block, TCB)
+    \vfill
+  \item inter-process communication (IPC, endpoints)
+    \vfill
+  \item device I/O management (ports, inturrupts, DMA address space)
+    \vfill
+  \end{itemize}
 \end{frame}
 
 \begin{frame}{Barrelfish: Overview}
