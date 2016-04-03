@@ -59,9 +59,9 @@ int create_connection(){
 int sign(Document* d) 
 {
 
-     //   const char private_key[] = "F2506E09D4153EED5ACBE1D620C93CA0D5580EF41AC0A401";
-    //    const char public_key[] = "027134EE605CB10FAE017BDD9FD88C96C8C080F08271637BB1"; 
-        const char pub_key[] = "";  //hex pub key from Sajin's message
+        const char private_key[] = "F2506E09D4153EED5ACBE1D620C93CA0D5580EF41AC0A401";
+        const char pub_key[] = "027134EE605CB10FAE017BDD9FD88C96C8C080F08271637BB1"; //hex pub key from Sajin's message
+    
         ECDSA_SIG *sig;
         char sig_str[B64SIZE];
         BN_CTX *ctx;
@@ -129,7 +129,7 @@ int sign(Document* d)
         printf("sig: %s, %s\n", BN_bn2hex(sig->r), BN_bn2hex(sig->s));
 }
 
-int process_request()
+int process_request(int sub_port)
 {
 
        /* 
@@ -159,6 +159,7 @@ int process_request()
 		BIGNUM *x, *y;
 		BN_CTX *ctx;
 		EC_KEY *eckey;
+		EC_POINT *ecp;
 		unsigned int now;
 		
 		eckey = EC_KEY_new_by_curve_name(NID_X9_62_prime192v3);
@@ -185,11 +186,10 @@ int process_request()
             return 1;
           } 
           
-        EC_POINT_get_affine_coordinates_GFp(EC_KEY_get0_group(eckey),
-				      EC_KEY_get0_public_key(eckey),
-				      x, y, ctx);
+//        ecp = EC_POINT_get_affine_coordinates_GFp(EC_KEY_get0_group(eckey),EC_KEY_get0_public_key(eckey),x, y, ctx);
+        ecp = (EC_KEY_get0_group(eckey),EC_KEY_get0_public_key(eckey),x, y, ctx);
         BN_CTX_free(ctx);
-        base64encode(su, x, y); 
+        base64encode(su, ecp->r, ecp->s); 
          
         d.Parse("{}");
 
@@ -215,7 +215,8 @@ int process_request()
 
 int main(int argc, char *argv[])
 {    
-    process_request();
+    int sub_port = argv[0];
+    process_request(sub_port);
     return 1;
 }
     

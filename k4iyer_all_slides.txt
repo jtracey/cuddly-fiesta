@@ -1,0 +1,70 @@
+Barrelfish: Overview
+Barrelfish aims to be a scalable operating system suited for running scalable parallel applications on hardware with many cores possibly of heterogeneous architectures.
+experimental computer operating system built by ETH Zurich with the assistance of Microsoft Research in Cambridge.
+
+Kernel objects are referenced by partitioned capabilities.  
+The actual capability can only be directly accessed and manipulated by the kernel, 
+while user level only has access to capability references (struct capref), which are addresses in a cspace, cia system calls
+this process is similar to the translation of a virtual address to a physical address 
+
+capability types:
+---
+
+
+Capability Operations Interaction:
+In Barrelfish, to limit the need for synchronization in the kernel, a separate
+copy of the kernel is run on every processing core, with copies not sharing any
+resources by default. This per-core share-nothing approach is also extended to
+userspace, creating a system where each core acts as a node in a distributed
+system
+
+Forcing all operations on a capability and its copies to go through a single
+core does not however solve all problems of synchronization: the operations
+“revoke”, “retype” and “delete” all require a consistent view of the capability’s
+relations.
+
+The retype operation must check a capability for descendants in the entire system.
+The delete operation must dispose of any per-copy state, and perform a final object cleanup when the last system-wide copy is deleted.
+The revoke operation may affect many capabilities; not only all descendants and copies of the revocation target, but the capabilities contained in any CNodes among those descendants, possibly causing cascaded deletes.
+
+Three capabilities exist in the system: 
+v at the top on core 1, 
+t on core 2 is v’s descendant, 
+and a third capability x on core 3 that is a descendant of t.
+
+Two operations are launched, a revoke of v on core 1, and a retype of t on core 2. 
+
+The revoke sends a notification to cores 2 and 3, 
+while the retype operation only needs to notify core 3. 
+
+Core 3 receives the revoke first, performing the corresponding delete.
+
+Next, the retype operation arrives on core 3, and is acknowledged as valid. 
+Core 2 receives the acknowledgement and performs the retype, creating a new capability n, before receiving the revoke notification from core 1 and deleting both t and n.
+
+In this scenario, both operations succeeded (for each operation a point was reached where the postcondition was fulfilled and it could thus terminate) and no capability invariants were broken.
+However, the retype operation received a view of the system caused by a partially run revoke. 
+We permit this situation: no invariants of the system are broken, and the client performing the retype must be able to handle unexpected deletion of the resulting capabilities just as easily as unexpected deletion of the retype’s source capability.
+As with deletion, the target of a revocation may be among the capabilities indirectly deleted, whether because it is in a slot of a CNode being revoked, or in a CNode affected by cascading deletes.
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+framework that extends UNIX APIs, 
+and provides new kernel primitives
+
+
+\item capabilities %- refined file descriptors with fine-grained rights
+   		    \item capability mode% - process sandboxes that deny access to global namespaces
+    		    \item process descriptors% - capability-centric process ID replacement
+    		    \item anonymous shared memory objects% - an extension to the POSIX shared memory API to support anonymous swap objects associated with file descriptors (capabilities)
+    		    \item rtld-elf-cap% - modified ELF run-time linker to construct sandboxed applications
+    		    \item libcapsicum %- library to create and use capabilities and sandboxed components
+    		    \item libuserangel %- library allowing sandboxed applications or components to interact with user angels, such as Power Boxes.
+    		    \item chromium-capsicum %- a version of Google's Chromium web browser that uses capability mode and capabilities to provide effective sandboxing of high-risk web page rendering
+    		    
+tcpdump provides an excellent example of Capsicum primitives offering immediate wins through straightforward changes, but also the subtleties that arise when compartmentalising software not written with that goal in mind. 
+tcpdump has a simple model: compile a pattern into a BPF filter, configure a BPF device as an input source, and loop writing captured packets rendered as text. This structure lends itself to sandboxing: resources are acquired early with ambient privilege, and later processing depends only on held capabilities, so can execute in capability mode. 
+The two-line change shown in Figure 6 implements this conversion.
+A two-line change adding capability mode to tcpdump : cap enter is called prior to the main libpcap
+(packet capture) work loop. Access to global file system, IPC, and network namespaces is restricted.   		    
+    		    
+    		    
+    		    

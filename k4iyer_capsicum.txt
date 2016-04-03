@@ -31,3 +31,21 @@ refine existing file descriptors- take away rights that are not required.
 
 apply capsicum on monolithic appilcation
 apply capsicum to map distributed distributed security to local security policies
+
+---------------------------------------------------------
+tcpdump provides an excellent example of Capsicum primitives offering immediate wins through straightforward changes, but also the subtleties that arise when compartmentalising software not written with that goal in mind. 
+tcpdump has a simple model: compile a pattern into a BPF filter, configure a BPF device as an input source, and loop writing captured packets rendered as text. This structure lends itself to sandboxing: resources are acquired early with ambient privilege, and later processing depends only on held capabilities, so can execute in capability mode. 
+The two-line change shown in Figure 6 implements this conversion.
+A two-line change adding capability mode to tcpdump : cap enter is called prior to the main libpcap
+(packet capture) work loop. Access to global file system, IPC, and network namespaces is restricted.
+---------------------------------------------------------
+
+
+
+This significantly improves security, as historically fragile packet-parsing code now executes with reduced privilege. However, further analysis with the procstat tool is required to confirm that only desired capabilities are exposed. 
+
+While there are few surprises, unconstrained access to a user’s terminal connotes significant rights, such as access to key presses. A refinement, shown in Figure 7, prevents reading stdin while still allowing output. 
+Figure 8 illustrates procstat on the re-sulting process, including capabilities wrapping file descriptors in order to narrow delegated rights. 
+
+ktrace reveals another problem, libc DNS resolver code depends on file system access, but not until after cap enter , leading to denied access and lost functionality, as shown in Figure 9. 
+This illustrates a subtle problem with sandboxing: highly layered software designs often rely on on-demand initialisation, lowering or avoiding startup costs, and those initialisation points are scattered across many components in system and application code. This is corrected by switching to the lightweight resolver, which sends DNS queries to a local daemon that performs actual resolution, addressing both file system and network address namespace concerns. Despite these limitations, this example of capability mode and capability APIs shows that even minor code changes can lead to dramatic security improvements, especially for a critical application with a long history of security problems.

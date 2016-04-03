@@ -18,13 +18,6 @@
 \institute[]{Cheriton School of Computer Science}
 \date{}
 
-%\AtBeginSubsection[]
-%{
-%  \begin{frame}<beamer>{Outline}
-%    \tableofcontents[currentsection,currentsubsection]
-%  \end{frame}
-%}
-
 
 \newcommand*\circled[1]{\tikz[baseline=(char.base)]{
             \node[shape=circle,draw,inner sep=2pt] (char) {#1};}}
@@ -197,36 +190,38 @@
 
 \begin{frame}{Barrelfish: Overview}
 	\begin{itemize}
+
 	\item suitable for scalable operating systems 
-	\item multi-cores, heterogeneous architectures
-	\item similar to the seL4 model, extensions for distributed capability management between cores
+		\vfill
+	\item multi-cores architecture
+		\vfill
+	\item heterogeneous architecture
+		\vfill
+	\item extensions of the seL4 model for distributed capability management between cores
 	\end{itemize}
 \end{frame}
 
-
-\begin{frame}{Barrelfish: Capabilities}
-	\begin{itemize}
-	\item kernel objects are referenced by partitioned capabilities
-	\item capabilities can be accessed and manipulated by the kernel alone
-	\item capability references: user level use system calls to access capabilities
-	\end{itemize}
-\end{frame}
 
 \begin{frame}{Barrelfish: Capability Types}
 \begin{itemize}
 \item Main Memory
+\vfill
 \item Page Tables 
+\vfill
 \item Device Memory
+\vfill
 \item Page tables Mapping Memory 
+\vfill
 \item Kernel interface
+\vfill
 \item Others
 \end{itemize}
 \end{frame}
 
 
-\begin{frame}{Capability Operations Interaction}
+\begin{frame}{Barrelfish: Capability Operations Interaction}
 \begin{figure}
-		  \includegraphics[scale=0.25]{img/BL_revoke_retype}
+		  \includegraphics[scale=0.25]{img/BF_revoke_retype}
 		  \caption{Revoke-Retype-Delete interactions}
 		  
     \end{figure}   
@@ -234,26 +229,32 @@
 
 \begin{frame}{Capsicum: Overview}
 	\begin{itemize}
-	\item API for implementing capabilities on UNIX 
+	\item API for implementing capabilities on UNIX
+	\vfill 
 	\item extends (not replace) standard UNIX APIs by adding kernel-level primitives
-	\item a sand-boxed capability mode, capability primitives 
-	\item as well as libcapsicum and a capability-aware run-time linker
+	\vfill
+	\item new OS primitives for implementing capabilities-
+		\begin{itemize}
+		    \item capabilities %- refined file descriptors with fine-grained rights
+   		    \item capability mode% - process sandboxes that deny access to global namespaces
+    		    \item process descriptors% - capability-centric process ID replacement
+    		    \item anonymous shared memory objects% - an extension to the POSIX shared memory API to support anonymous swap objects associated with file descriptors (capabilities)
+    		    \item rtld-elf-cap% - modified ELF run-time linker to construct sandboxed applications
+    		    \item libcapsicum %- library to create and use capabilities and sandboxed components
+    		    \item libuserangel %- library allowing sandboxed applications or components to interact with user angels, such as Power Boxes.
+    		    \item chromium-capsicum %- a version of Google's Chromium web browser that uses capability mode and capabilities to provide effective sandboxing of high-risk web page rendering.
+
+		\end{itemize}
 	\end{itemize}
 \end{frame}
 
 
-\begin{frame}{Capsicum: Working}
-	\begin{itemize}
-	\item Capability mode ($cap_enter$)
-	\item $cap_new$ system call
-	\item libcapsicum 
-	\end{itemize}
-\end{frame}
 
-\begin{frame}
+
+\begin{frame}{Capsicum: Example}
 	\begin{figure}
-%		  \includegraphics[scale=0.25]{img/BL_revoke_retype}
-		  \caption{capsicum exmaple}
+		  \includegraphics[scale=0.3]{img/tcpdump}
+		  \caption{capsicum example}
 		  
     \end{figure}  
 \end{frame}
