@@ -1,6 +1,13 @@
-//USAGE : ./name <filename_of_instructions> <PORT_NO_VERIFIER> <PORT_NO_ISSUER> 
-//compile with -lcrypto
+//USAGE : ./name <filename_of_instructions> <PORT_NO_ISSUER> 
+//compile with -lcrypto 
 //For dump_mem comparison of Digests (uncomment dump_mem and compile with base64.o,cencode.o,cdecode.o) 
+
+/*
+TO-DO's : 
+remove read_keypair
+create_keypair 
+
+*/
 
 #include <string.h>
 #include <iostream>
@@ -163,17 +170,17 @@ int send_token(unsigned char **sig, unsigned int *sig_len, char **json_message, 
 }
 
 
-int create_keypair(const char * client_name)
+int create_keypair(const char * client_name, EC_KEY **ec_key)
 {
 
-	EC_KEY *ec_key = EC_KEY_new();
+	*ec_key = EC_KEY_new();
 	EC_GROUP* ec_group_new = EC_GROUP_new_by_curve_name(NID_X9_62_prime192v3);
 	const EC_GROUP *ec_group = ec_group_new;
-	if(!EC_KEY_set_group(ec_key,ec_group))	{
+	if(!EC_KEY_set_group(*ec_key,ec_group))	{
 		printf("EC_KEY_set_group Error");
 		return 1;
 	}
-	if(!EC_KEY_generate_key(ec_key)) {
+	if(!EC_KEY_generate_key(*ec_key)) {
 		printf("Generatekey Error");
 		return 1;
 	}
@@ -182,14 +189,14 @@ int create_keypair(const char * client_name)
 
 
 	//Save Private Key to File
-	const BIGNUM *private_key = EC_KEY_get0_private_key(ec_key);
+	const BIGNUM *private_key = EC_KEY_get0_private_key(*ec_key);
 	char *priv_hex = BN_bn2hex(private_key);
 	printf("%s\n",priv_hex);
 	fwrite(priv_hex,sizeof(char),strlen(priv_hex),keys);
 	fwrite("\n", sizeof(char) ,1,keys);	
 
 	//Save Public Key to file
-	const EC_POINT *public_key = EC_KEY_get0_public_key(ec_key);
+	const EC_POINT *public_key = EC_KEY_get0_public_key(*ec_key);
 	BIGNUM *pub_key;
 	point_conversion_form_t form = EC_GROUP_get_point_conversion_form(ec_group);
 	BN_CTX *ctx;
@@ -299,7 +306,7 @@ int access_resource( const char *resource_name, EC_KEY **ec_key)
 	return 0;
 }
 
-void parse(string buffer)
+void parse(string buffer, EC_KEY **ec_key)
 {
 	std::vector<std::string> token_vector;
 	token_vector = split(buffer,' ');
@@ -320,7 +327,7 @@ void parse(string buffer)
 		else if((*token_iterator).compare("createc")==0)
 		{
 			string client_name = *(++token_iterator);
-			create_keypair(client_name.c_str());
+			create_keypair(client_name.c_str(), ec_key);
 		}
 		else if((*token_iterator).compare("removec")==0)
 		{	
@@ -335,11 +342,12 @@ void parse(string buffer)
 		else if((*token_iterator).compare("access")==0)
 		{
 
-			string client_name = *(++token_iterator);
+			string client_name = *(++token_iterator);	
+			port_verifier = atoi(client_name.c_str());
 			string resource_name = *(++token_iterator);
-			EC_KEY *ec_key;
-			read_keypair("FIX_KEY", &ec_key);
-			access_resource(resource_name.c_str(), &ec_key);
+			printf("PORT : %d", port_verifier);
+			read_keypair("FIX_KEY", ec_key);
+			access_resource(resource_name.c_str(), ec_key);
 		}
 		token_iterator++;
 	}
@@ -347,18 +355,18 @@ void parse(string buffer)
 
 int main(int argc, char *argv[])
 {
-
+	
+	EC_KEY *ec_key;
 	ifstream input_file(argv[1],std::ifstream::binary);
 	string buffer;
 
-	port_verifier = atoi(argv[2]);
-	port_issuer = atoi(argv[3]);		
+	port_issuer = atoi(argv[2]);		
 	
 	while(!input_file.eof())
 	{
 		getline(input_file, buffer);
 		//cout<<buffer<<endl;
-		parse(buffer);
+		parse(buffer, &ec_key);
 
 	}	
 
