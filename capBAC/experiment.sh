@@ -33,7 +33,9 @@ M=5
 START=`date +%s`
 CLOCK_TIME=5 # time in seconds to run requests
 echo running requests for $CLOCK_TIME seconds...
-./client commands 49151 &
+./client <(echo createc sajin && yes access 49152 token.json) 49151 > logs/client_log 2>&1 &
+#./client <(echo createc sajin && yes access 49152 token.json $'\n'access 49153 token.json $'\n'access 49154 token.json) 49151 > logs/client_log 2>&1 &
+#./client commands 49151 > /dev/null 2>&1 &
 sleep $CLOCK_TIME
 
 # kill everything
