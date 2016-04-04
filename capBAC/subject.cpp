@@ -101,7 +101,7 @@ int get_token(const char *resource_name, EC_KEY **ec_key)
 		printf("get_token: failed to connect: %s\n", strerror(errno));
 		//return 1;
 	}
-	/*
+	
 
 	if(write(soc, message, strlen(message)+1) < 0) {
 		printf("Failed to write to socket\n");
@@ -117,7 +117,7 @@ int get_token(const char *resource_name, EC_KEY **ec_key)
 		printf("Failed to read RESPONSE from socket\n");
 		//return 1;
 	}
-	*/
+	
 
 	close(soc);
 	return 0;
