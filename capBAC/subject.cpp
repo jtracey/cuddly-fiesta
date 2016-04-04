@@ -1,13 +1,13 @@
 //USAGE : ./name <filename_of_instructions> <PORT_NO_ISSUER> <MODE(1/2)>
-//compile with -lcrypto 
-//For dump_mem comparison of Digests (uncomment dump_mem and compile with base64.o,cencode.o,cdecode.o) 
+//compile with -lcrypto
+//For dump_mem comparison of Digests (uncomment dump_mem and compile with base64.o,cencode.o,cdecode.o)
 
 /*
 TO-DO's :
 remove read_keypair
 create_keypair
 In Mode1_get_token from socket write json to json_message, and remove retrieveing json from file
-Remove hard-coded keys 
+Remove hard-coded keys
 */
 
 #include <string.h>
@@ -35,8 +35,7 @@ using namespace rapidjson;
 
 #define MACHINE_IP  inet_addr("127.0.0.1")
 #define PORT_ISSUER  49151
-#define PORT_VERIFIER 49157
-#define TOKEN_IDENTIFIER_SIZE 16 
+#define TOKEN_IDENTIFIER_SIZE 16
 
 int port_verifier;
 int port_issuer;
@@ -65,6 +64,9 @@ int get_token(const char *resource_name, EC_KEY **ec_key)
 	int soc,response_length;
 	char *response;
 	uint16_t port = PORT_ISSUER;
+	BIGNUM *x, *y;
+	x = BN_new();
+	y = BN_new();
 
 	soc = socket(AF_INET, SOCK_STREAM, 0);
 	if (soc == -1)	{
@@ -86,12 +88,14 @@ int get_token(const char *resource_name, EC_KEY **ec_key)
 	point_conversion_form_t form = EC_GROUP_get_point_conversion_form(ec_group);
 	BN_CTX *ctx;
 	ctx = BN_CTX_new();
-	char *pub_hex = EC_POINT_point2hex(ec_group, ec_point, form, ctx);
+	EC_POINT_get_affine_coordinates_GFp(ec_group, ec_point, x, y, ctx);
+        char pub_key_b64[B64SIZE];
+        base64encode(pub_key_b64, x, y);
 
 	//Create Message <Public_Key_in_Hex\nResource_Name>
 	char *message;
-	message = (char *) malloc(strlen(pub_hex) + strlen(resource_name) + 2);
-	strcat(message,pub_hex);
+	message = (char *) malloc(B64SIZE + strlen(resource_name) + 2);
+	snprintf(message, B64SIZE, "%s", pub_key_b64);
 	strcat(message, "\n");
 	strcat(message,resource_name);
 	printf("MESSAGE: \n%s\n",message);
@@ -101,8 +105,8 @@ int get_token(const char *resource_name, EC_KEY **ec_key)
 		printf("get_token: failed to connect: %s\n", strerror(errno));
 		//return 1;
 	}
-	
 
+	/*
 	if(write(soc, message, strlen(message)+1) < 0) {
 		printf("Failed to write to socket\n");
 		//return 1;
@@ -117,7 +121,7 @@ int get_token(const char *resource_name, EC_KEY **ec_key)
 		printf("Failed to read RESPONSE from socket\n");
 		//return 1;
 	}
-	
+	*/
 
 	close(soc);
 	return 0;
@@ -336,30 +340,30 @@ int mode2_send_token_identifier(char *token_identifier)
 	connectAddress.sin_family = AF_INET;
 	connectAddress.sin_addr.s_addr = MACHINE_IP;
 	connectAddress.sin_port = htons(port);
-		
+
 	if(connect(soc, (struct sockaddr *) &connectAddress, sizeof(connectAddress)) < 0) {
 		printf("failed to connect: %s\n", strerror(errno));
 		//return 1;
 	}
-	
+
 	printf("SEND_TOKEN_IDENTIFIER: %s", token_identifier);
 	if(write(soc, token_identifier, TOKEN_IDENTIFIER_SIZE) < 0) {
 		printf("Failed to write to socket\n");
 		//return 1;
 	}
-	
+
 	if(read(soc, &response, 1) < 0) {
 		printf("Failed to read RESPONSE_LENGTH from socket\n");
 		//return 1;
-	}	
+	}
 	printf("RESPONSE : %c",response);
-	return 0;	
+	return 0;
 
 }
 
 
 int mode2_get_token_identifier(const char *resource_name, EC_KEY **ec_key, char *token_identifier )
-{	
+{
 	int soc,response_length;
 	char *response;
 	uint16_t port = PORT_ISSUER;
@@ -392,9 +396,9 @@ int mode2_get_token_identifier(const char *resource_name, EC_KEY **ec_key, char 
 	strcat(message,pub_hex);
 	strcat(message, "\n");
 	strcat(message,resource_name);
-	printf("MESSAGE: \n%s\n",message);	
+	printf("MESSAGE: \n%s\n",message);
 
-		
+
 	if(connect(soc, (struct sockaddr *) &connectAddress, sizeof(connectAddress)) < 0) {
 		printf("failed to connect: %s\n", strerror(errno));
 		//return 1;
@@ -409,14 +413,14 @@ int mode2_get_token_identifier(const char *resource_name, EC_KEY **ec_key, char 
 		printf("Failed to read RESPONSE_LENGTH from socket\n");
 		//return 1;
 	}
-	
-	record r1 = 
+
+	record r1 =
 	map_table.insert()
-	
+
 	*/
 
 	return 0;
-	
+
 }
 
 
@@ -485,15 +489,15 @@ int main(int argc, char *argv[])
 {
 
 	EC_KEY *ec_key;
-	map_tokens token_table; 
-	
+	map_tokens token_table;
+
 	ifstream input_file(argv[1],std::ifstream::binary);
 	string buffer;
 
-	port_issuer = atoi(argv[2]);
-	
+	port_verifier = atoi(argv[2]);
+
 	run_mode = atoi(argv[3]);
-	
+
 
 	while(!input_file.eof())
 	{
