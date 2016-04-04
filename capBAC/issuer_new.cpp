@@ -228,7 +228,7 @@ int get_request(int fd,int soc) {
         cout << "buffer data : "<< buffer.GetString() ;
         cout << "\n buffer len:" << buffer.GetSize();
         
-        if(write(soc, buffer.GetString(), buffer.GetSize()+1) < 0) {
+        if(write(fd, buffer.GetString(), buffer.GetSize()+1) < 0) {
     		printf("Failed to write to socket\n");  
 		
 		//else printf("Requested token sent back to subject");
