@@ -41,7 +41,7 @@ int sign(Document* d)
 {
 
         const char private_key[] = "F2506E09D4153EED5ACBE1D620C93CA0D5580EF41AC0A401";
-        const char pub_key[] = "027134EE605CB10FAE017BDD9FD88C96C8C080F08271637BB1"; //hex pub key from Sajin's message
+        const char pub_key[] = "027134EE605CB10FAE017BDD9FD88C96C8C080F08271637BB1"; 
     
         ECDSA_SIG *sig;
         char sig_str[B64SIZE];
@@ -67,7 +67,7 @@ int sign(Document* d)
         return 1;
         }
 
-        EC_POINT_hex2point(EC_KEY_get0_group(auth_key),pub_key, NULL, ctx);        //hex pub key from Sajin's message
+        EC_POINT_hex2point(EC_KEY_get0_group(auth_key),pub_key, NULL, ctx);       
 			               
         BN_CTX_free(ctx);
 
@@ -151,7 +151,7 @@ int bootstrap_network(const char* port_sub){
 }
 
 
-char* get_request(int fd) {
+int get_request(int fd,int soc) {
   char* message;
   size_t size = TOKENSIZE;
   int offset;
@@ -176,17 +176,66 @@ char* get_request(int fd) {
       printf("get_request: EOF encountered\n");
 
       char c = message[offset];
-      message[offset] = 0;
+      message[offset] = '\0';
       printf("story so far (%d): %s%c\n", offset, message, c);
 
       exit(1);
     }
-  } while (message[offset] != 0);
+  } while (message[offset] != '\0');
 
 
   printf("DEBUG: get_request: message at %p: %s\n", message, message);
 
-  return message;
+//  return message;
+  //string message = sub_request;
+        vector<string> sep = split(message, '\n');
+	    const char * pub_key = sep[0].c_str();
+        const char * res_add = sep[1].c_str();
+
+        cout << "public key (b64): " << pub_key << "\n";
+        cout << "resource address: " << res_add << "\n";
+        
+        
+    
+	    Document d;
+	    Value ii, nb, na, suv, dev;
+        char su[B64SIZE];
+		unsigned int now;
+	     
+        d.Parse("{}");
+
+        now = time(NULL);
+        ii.SetInt(now);
+        nb.SetInt(now);
+        na.SetInt(1600000000); 
+        suv.SetString(pub_key, B64SIZE, d.GetAllocator());
+        dev.SetString(res_add, (offset - B64SIZE -1), d.GetAllocator());
+    
+        d.AddMember("id", "fake identifier", d.GetAllocator());
+        d.AddMember("ii", ii, d.GetAllocator());
+        d.AddMember("is", "fake issuer", d.GetAllocator());
+        d.AddMember("su", suv, d.GetAllocator());
+        d.AddMember("de", dev, d.GetAllocator());
+        d.AddMember("ar", "fake access rights", d.GetAllocator());
+        d.AddMember("nb", nb, d.GetAllocator());
+        d.AddMember("na", na, d.GetAllocator());
+       
+        sign(&d);
+        
+        StringBuffer buffer;
+        Writer<StringBuffer> writer(buffer);
+        d.Accept(writer);
+        
+        cout << "buffer data : "<< buffer.GetString() ;
+        cout << "\n buffer len:" << buffer.GetSize();
+        
+        if(write(soc, buffer.GetString(), buffer.GetSize()+1) < 0) {
+    		printf("Failed to write to socket\n");  
+		
+		//else printf("Requested token sent back to subject");
+		
+		}
+		return 1;
 }
 
 
@@ -210,11 +259,11 @@ int listen_block1(int soc)
             }
             printf( "DEBUG: network loop: connection accepted, getting request from subject...\n");
         
-            sub_request = get_request(fd);
+             get_request(fd,soc);
         
         }
         
-        string message = sub_request;
+       /* string message = sub_request;
         vector<string> sep = split(message, '\n');
 	    const char * pub_key = sep[0].c_str();
         const char * res_add = sep[1].c_str();
@@ -255,8 +304,10 @@ int listen_block1(int soc)
         
         if(write(soc, buffer.GetString(), buffer.GetSize()+1) < 0) {
 		printf("Failed to write to socket\n");
-		//return 1;
-	}
+		
+		else printf("Requested token sent back to subject");
+		//return 1;*/
+	//}
 }
 
 int listen_block2(int soc){
@@ -280,4 +331,3 @@ int main(int argc, char *argv[])
   
   return 1;
 }
-    
