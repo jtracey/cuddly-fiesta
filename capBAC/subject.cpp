@@ -8,7 +8,7 @@ remove read_keypair
 create_keypair
 In Mode1_get_token from socket write json to json_message, and remove retrieveing json from file
 Remove hard-coded keys
-*/
+ */
 
 #include <string.h>
 #include <iostream>
@@ -58,6 +58,40 @@ std::vector<std::string> split(const std::string &s, char delim) {
 	return elems;
 }
 
+char* get_json(int fd) {
+	char* json;
+	size_t size = TOKENSIZE;
+	int offset;
+
+	json = (char*) realloc(NULL, sizeof(char)*size);
+	if(!json) {
+		fprintf(stdout, "get_json: Failure to realloc\n");
+		exit(1);
+	}
+
+	offset = -1;
+	do {
+		offset++;
+		if (offset == size) {
+			json = (char*) realloc(json, sizeof(char)*(size += 16));
+			if(!json) {
+				fprintf(stdout, "get_json: Failure to realloc\n");
+				exit(1);
+			}
+		}
+		if(read(fd, json+offset, 1) <= 0) {
+			
+			fprintf(stdout, "get_json: EOF encountered. ERROR STRING :  %s \n",strerror(errno));
+			char c = json[offset];
+			json[offset] = 0;
+			fprintf(stdout, "story so far (%d): %s%c\n", offset, json, c);
+			exit(1);
+		}
+	} while (json[offset] != 0);
+
+	fprintf(stdout, "DEBUG: get_json: json at %p: %s\n", json, json);
+	return json;
+}
 
 int get_token(const char *resource_name, EC_KEY **ec_key, char **json_message, size_t *json_length)
 {
@@ -89,8 +123,8 @@ int get_token(const char *resource_name, EC_KEY **ec_key, char **json_message, s
 	BN_CTX *ctx;
 	ctx = BN_CTX_new();
 	EC_POINT_get_affine_coordinates_GFp(ec_group, ec_point, x, y, ctx);
-        char pub_key_b64[B64SIZE];
-        base64encode(pub_key_b64, x, y);
+	char pub_key_b64[B64SIZE];
+	base64encode(pub_key_b64, x, y);
 
 	//Create Message <Public_Key_in_Hex\nResource_Name>
 	char *message;
@@ -111,19 +145,20 @@ int get_token(const char *resource_name, EC_KEY **ec_key, char **json_message, s
 		//return 1;
 	}
 	
-	char resp_byte;
-	int loc = 0;
-	*json_message = (char *) malloc (1000); 
-	cout << "Starting Read Loop" << endl;
-	read(soc, &resp_byte,1);
-	{
+	/*	
+		char resp_byte;
+		int loc = 0;
+		size_t size_resp;	
+
+		cout << "Starting Read Loop" << endl;
+		read(soc, &resp_byte, 1);
+		{
 		(*json_message)[loc] = resp_byte;
 		loc++;
-	}
-	(*json_message)[loc] = '\0';
-
-	cout <<"RECIEVED_JSON_MESSAGE : " << json_message << endl;
-
+		}
+	*/
+	*json_message = get_json(soc);
+	
 	close(soc);
 	return 0;
 
@@ -175,15 +210,15 @@ int send_token(unsigned char **sig, unsigned int *sig_len, char **json_message, 
 	}
 
 	/*
-	if(read(soc, &response, 1) < 0) {
-		printf("Failed to read RESPONSE from socket\n");
-		//return 1;
-	}
-	*/
+	   if(read(soc, &response, 1) < 0) {
+	   printf("Failed to read RESPONSE from socket\n");
+//return 1;
+}
+	 */
 
-	close(soc);
-	printf("RESPONSE : %c",response);
-	return 0;
+close(soc);
+printf("RESPONSE : %c",response);
+return 0;
 
 }
 
@@ -271,7 +306,8 @@ int sign_token(const char *token_file , EC_KEY **ec_key, unsigned char **sig, un
 	EVP_MD_CTX* mdctx;
 	unsigned char md_value[EVP_MAX_MD_SIZE];
 	unsigned int md_len;
-
+	
+	/*
 	FILE *sign_file = fopen(token_file, "r");
 	fseek (sign_file, 0, SEEK_END);
 	*json_length= ftell(sign_file);
@@ -279,8 +315,8 @@ int sign_token(const char *token_file , EC_KEY **ec_key, unsigned char **sig, un
 
 	*json_message = (char*) malloc(*json_length);
 	fread(*json_message, sizeof(char), *json_length, sign_file);
+	*/
 	cout <<"Signing : " <<*json_message << endl;
-	(*json_message)[*json_length-1] = '\0';
 
 	OpenSSL_add_all_digests();
 	md = EVP_get_digestbyname("sha256");
@@ -306,7 +342,6 @@ int sign_token(const char *token_file , EC_KEY **ec_key, unsigned char **sig, un
 	//int ret = ECDSA_verify(0, md_value, md_len, *sig, *sig_len, *ec_key);
 	//printf("\n Ret : %d \n",ret);
 
-	fclose(sign_file);
 	return 0;
 }
 
@@ -315,13 +350,17 @@ int mode1_access_resource( const char *resource_name, EC_KEY **ec_key)
 
 	unsigned char *sig;
 	unsigned int sig_len;
-	char *json_message;
-	size_t json_length;
-
+	size_t json_length;	
+	char *json_message; 
+	
 	//Get token_file from get_token() to replace 'dummytoken'
 	string token_file("dummytoken");
 	get_token(resource_name, ec_key, &json_message, &json_length);
+	
+	cout<< "\nJSON_MESSAGE_RECIEVED : " << json_message << endl;
+	json_length = strlen(json_message);
 	sign_token(token_file.c_str(), ec_key, &sig, &sig_len, &json_message, &json_length);
+
 	send_token(&sig, &sig_len, &json_message, &json_length);
 	return 0;
 }
@@ -365,75 +404,75 @@ int mode2_send_token_identifier(char **token_identifier)
 
 int mode2_get_token_identifier(const char *resource_name, EC_KEY **ec_key, char **token_identifier )
 {
-	
+
 	std::string map_key = std::to_string(port_verifier);
 	map_key.append(std::to_string(*resource_name));
 
 	if(map_table.find(map_key) == map_table.end())
 	{
-	int soc,response_length;
-	char *response;
-	uint16_t port = port_issuer;
-	BIGNUM *x, *y;
-	x = BN_new();
-	y = BN_new();	
+		int soc,response_length;
+		char *response;
+		uint16_t port = port_issuer;
+		BIGNUM *x, *y;
+		x = BN_new();
+		y = BN_new();	
 
-	soc = socket(AF_INET, SOCK_STREAM, 0);
-	if (soc == -1)	{
-		printf("Socket Failed\n");
-		return 1;
-	}
+		soc = socket(AF_INET, SOCK_STREAM, 0);
+		if (soc == -1)	{
+			printf("Socket Failed\n");
+			return 1;
+		}
 
-	struct sockaddr_in connectAddress;
-	memset(&connectAddress, 0, sizeof(connectAddress));
-	connectAddress.sin_family = AF_INET;
-	connectAddress.sin_addr.s_addr = MACHINE_IP;
-	connectAddress.sin_port = htons(port);
-
-
-	EC_GROUP* ec_group_new = EC_GROUP_new_by_curve_name(NID_X9_62_prime192v3);
-	const EC_GROUP *ec_group = ec_group_new;
-	const EC_POINT *ec_point = EC_KEY_get0_public_key(*ec_key);
-	BIGNUM *public_key;
-	point_conversion_form_t form = EC_GROUP_get_point_conversion_form(ec_group);
-	BN_CTX *ctx;
-	ctx = BN_CTX_new();
-
- 	EC_POINT_get_affine_coordinates_GFp(ec_group, ec_point, x, y, ctx);
-        char pub_key_b64[B64SIZE];
-        base64encode(pub_key_b64, x, y);
-
-        //Create Message <Public_Key_in_Hex\nResource_Name>
-        char *message;
-        message = (char *) malloc(B64SIZE + strlen(resource_name) + 2);
-        snprintf(message, B64SIZE, "%s", pub_key_b64);
-        strcat(message, "\n");
-        strcat(message,resource_name);
-        printf("MESSAGE: \n%s\n",message);
+		struct sockaddr_in connectAddress;
+		memset(&connectAddress, 0, sizeof(connectAddress));
+		connectAddress.sin_family = AF_INET;
+		connectAddress.sin_addr.s_addr = MACHINE_IP;
+		connectAddress.sin_port = htons(port);
 
 
-	if(connect(soc, (struct sockaddr *) &connectAddress, sizeof(connectAddress)) < 0) {
-		printf("failed to connect: %s\n", strerror(errno));
+		EC_GROUP* ec_group_new = EC_GROUP_new_by_curve_name(NID_X9_62_prime192v3);
+		const EC_GROUP *ec_group = ec_group_new;
+		const EC_POINT *ec_point = EC_KEY_get0_public_key(*ec_key);
+		BIGNUM *public_key;
+		point_conversion_form_t form = EC_GROUP_get_point_conversion_form(ec_group);
+		BN_CTX *ctx;
+		ctx = BN_CTX_new();
+
+		EC_POINT_get_affine_coordinates_GFp(ec_group, ec_point, x, y, ctx);
+		char pub_key_b64[B64SIZE];
+		base64encode(pub_key_b64, x, y);
+
+		//Create Message <Public_Key_in_Hex\nResource_Name>
+		char *message;
+		message = (char *) malloc(B64SIZE + strlen(resource_name) + 2);
+		snprintf(message, B64SIZE, "%s", pub_key_b64);
+		strcat(message, "\n");
+		strcat(message,resource_name);
+		printf("MESSAGE: \n%s\n",message);
+
+
+		if(connect(soc, (struct sockaddr *) &connectAddress, sizeof(connectAddress)) < 0) {
+			printf("failed to connect: %s\n", strerror(errno));
+			//return 1;
+		}
+		/*
+		   if(write(soc, message, strlen(message)+1) < 0) {
+		   printf("Failed to write to socket\n");
 		//return 1;
-	}
-	/*
-	if(write(soc, message, strlen(message)+1) < 0) {
-		printf("Failed to write to socket\n");
-		//return 1;
-	}
+		}
 
-	if(read(soc, token_identifier, TOKEN_IDENTIFIER_SIZE ) < 0) {
+		if(read(soc, token_identifier, TOKEN_IDENTIFIER_SIZE ) < 0) {
 		printf("Failed to read RESPONSE_LENGTH from socket\n");
 		//return 1;
-	}
-	*/
-		
-	record r1 = make_pair(map_key, std::to_string(**token_identifier));
-	map_table.insert(r1);
+		}
+		 */
+
+		record r1 = make_pair(map_key, std::to_string(**token_identifier));
+		map_table.insert(r1);
 	}
 	else
 	{	
-	strcpy(*token_identifier,(*(map_table.find(map_key))).second.c_str());	
+		strcpy(*token_identifier,(*(map_table.find(map_key))).second.c_str());	
 	}
 
 
