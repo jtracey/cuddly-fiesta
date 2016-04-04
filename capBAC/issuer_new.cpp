@@ -46,6 +46,7 @@ int sign(Document* d)
         ECDSA_SIG *sig;
         char sig_str[B64SIZE];
         BN_CTX *ctx;
+	BIGNUM *a;
         EVP_MD_CTX* mdctx;
         const EVP_MD* md;
         unsigned char md_value[EVP_MAX_MD_SIZE];
@@ -66,9 +67,12 @@ int sign(Document* d)
         printf("failed to create bn ctx\n");
         return 1;
         }
-
-        EC_POINT_hex2point(EC_KEY_get0_group(auth_key),pub_key, NULL, ctx);       
-			               
+	EC_KEY_set_public_key(auth_key,
+			      EC_POINT_hex2point(EC_KEY_get0_group(auth_key),pub_key, NULL, ctx));       
+	a = BN_new();
+	BN_hex2bn(&a, private_key);
+	EC_KEY_set_private_key(auth_key, a);
+		               
         BN_CTX_free(ctx);
 
         StringBuffer buffer;
@@ -107,11 +111,6 @@ int sign(Document* d)
         d->AddMember("si", si, d->GetAllocator());
 
         printf("sig: %s, %s\n", BN_bn2hex(sig->r), BN_bn2hex(sig->s));
-        
-        
-        
-        
-        
 }
 
 int bootstrap_network(const char* port_sub){
