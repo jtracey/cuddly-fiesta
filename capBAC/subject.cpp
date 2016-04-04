@@ -34,7 +34,6 @@ using namespace std;
 using namespace rapidjson;
 
 #define MACHINE_IP  inet_addr("127.0.0.1")
-#define PORT_ISSUER  49151
 #define TOKEN_IDENTIFIER_SIZE 17
 
 int port_verifier;
@@ -64,7 +63,7 @@ int get_token(const char *resource_name, EC_KEY **ec_key, char **json_message, s
 {
 	int soc,response_length;
 	char *response;
-	uint16_t port = PORT_ISSUER;
+	uint16_t port = port_issuer;
 	BIGNUM *x, *y;
 	x = BN_new();
 	y = BN_new();
@@ -114,7 +113,9 @@ int get_token(const char *resource_name, EC_KEY **ec_key, char **json_message, s
 	
 	char resp_byte;
 	int loc = 0;
-	while(read(soc, &resp_byte,1))
+	*json_message = (char *) malloc (1000); 
+	cout << "Starting Read Loop" << endl;
+	read(soc, &resp_byte,1);
 	{
 		(*json_message)[loc] = resp_byte;
 		loc++;
@@ -122,15 +123,6 @@ int get_token(const char *resource_name, EC_KEY **ec_key, char **json_message, s
 	(*json_message)[loc] = '\0';
 
 	cout <<"RECIEVED_JSON_MESSAGE : " << json_message << endl;
-	if(read(soc, &response_length, 1) < 0) {
-		printf("Failed to read RESPONSE_LENGTH from socket\n");
-		//return 1;
-	}
-
-	if(read(soc, &response, 1) < 0) {
-		printf("Failed to read RESPONSE from socket\n");
-		//return 1;
-	}
 
 	close(soc);
 	return 0;
@@ -381,7 +373,7 @@ int mode2_get_token_identifier(const char *resource_name, EC_KEY **ec_key, char 
 	{
 	int soc,response_length;
 	char *response;
-	uint16_t port = PORT_ISSUER;
+	uint16_t port = port_issuer;
 	BIGNUM *x, *y;
 	x = BN_new();
 	y = BN_new();	
@@ -520,7 +512,7 @@ int main(int argc, char *argv[])
 	ifstream input_file(argv[1],std::ifstream::binary);
 	string buffer;
 
-	port_verifier = atoi(argv[2]);
+	port_issuer = atoi(argv[2]);
 
 	run_mode = atoi(argv[3]);
 
