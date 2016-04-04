@@ -35,7 +35,7 @@ using namespace rapidjson;
 
 #define MACHINE_IP  inet_addr("127.0.0.1")
 #define PORT_ISSUER  49151
-#define TOKEN_IDENTIFIER_SIZE 16
+#define TOKEN_IDENTIFIER_SIZE 17
 
 int port_verifier;
 int port_issuer;
@@ -59,7 +59,7 @@ std::vector<std::string> split(const std::string &s, char delim) {
 }
 
 
-int get_token(const char *resource_name, EC_KEY **ec_key)
+int get_token(const char *resource_name, EC_KEY **ec_key, char **json_message, size_t *json_length)
 {
 	int soc,response_length;
 	char *response;
@@ -111,6 +111,15 @@ int get_token(const char *resource_name, EC_KEY **ec_key)
 		printf("Failed to write to socket\n");
 		//return 1;
 	}
+	
+	char resp_byte;
+	int loc = 0;
+	while(read(soc, &resp_byte,1)
+	{
+		(*json_message)[loc] = resp_byte;
+		loc++;
+	}
+	(*json_message)[loc] = '\0';
 
 	if(read(soc, &response_length, 1) < 0) {
 		printf("Failed to read RESPONSE_LENGTH from socket\n");
@@ -367,6 +376,9 @@ int mode2_get_token_identifier(const char *resource_name, EC_KEY **ec_key, char 
 	int soc,response_length;
 	char *response;
 	uint16_t port = PORT_ISSUER;
+	BIGNUM *x, *y;
+	x = BN_new();
+	y = BN_new();	
 
 	soc = socket(AF_INET, SOCK_STREAM, 0);
 	if (soc == -1)	{
@@ -388,15 +400,18 @@ int mode2_get_token_identifier(const char *resource_name, EC_KEY **ec_key, char 
 	point_conversion_form_t form = EC_GROUP_get_point_conversion_form(ec_group);
 	BN_CTX *ctx;
 	ctx = BN_CTX_new();
-	char *pub_hex = EC_POINT_point2hex(ec_group, ec_point, form, ctx);
 
-	//Create Message <Public_Key_in_Hex\nResource_Name>
-	char *message;
-	message = (char *) malloc(strlen(pub_hex) + strlen(resource_name) + 2);
-	strcat(message,pub_hex);
-	strcat(message, "\n");
-	strcat(message,resource_name);
-	printf("MESSAGE: \n%s\n",message);
+ 	EC_POINT_get_affine_coordinates_GFp(ec_group, ec_point, x, y, ctx);
+        char pub_key_b64[B64SIZE];
+        base64encode(pub_key_b64, x, y);
+
+        //Create Message <Public_Key_in_Hex\nResource_Name>
+        char *message;
+        message = (char *) malloc(B64SIZE + strlen(resource_name) + 2);
+        snprintf(message, B64SIZE, "%s", pub_key_b64);
+        strcat(message, "\n");
+        strcat(message,resource_name);
+        printf("MESSAGE: \n%s\n",message);
 
 
 	if(connect(soc, (struct sockaddr *) &connectAddress, sizeof(connectAddress)) < 0) {
