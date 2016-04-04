@@ -107,6 +107,11 @@ int sign(Document* d)
         d->AddMember("si", si, d->GetAllocator());
 
         printf("sig: %s, %s\n", BN_bn2hex(sig->r), BN_bn2hex(sig->s));
+        
+        
+        
+        
+        
 }
 
 int bootstrap_network(const char* port_sub){
@@ -129,7 +134,7 @@ int bootstrap_network(const char* port_sub){
 	    connectAddress.sin_addr.s_addr = MACHINE_IP;
 	    connectAddress.sin_port = htons(port);
         
-        cout << connectAddress.sin_addr.s_addr << "\t" <<  connectAddress.sin_port << "\n";
+ //       cout << connectAddress.sin_addr.s_addr << "\t" <<  connectAddress.sin_port << "\n";
         
        if(bind(soc, (struct sockaddr *) &connectAddress, sizeof(connectAddress)) == -1) {
             printf("bootstrap: Failed to bind\n");
@@ -144,6 +149,7 @@ int bootstrap_network(const char* port_sub){
         return soc;
         
 }
+
 
 char* get_request(int fd) {
   char* message;
@@ -241,7 +247,15 @@ int listen_block1(int soc)
         d.AddMember("na", na, d.GetAllocator());
        
         sign(&d);
-    
+        
+        StringBuffer buffer;
+        Writer<StringBuffer> writer(buffer);
+        d.Accept(writer);
+        
+        if(write(soc, buffer.GetString(), buffer.GetSize()+1) < 0) {
+		printf("Failed to write to socket\n");
+		//return 1;
+	}
 }
 
 int listen_block2(int soc){
