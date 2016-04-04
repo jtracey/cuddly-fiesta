@@ -1,12 +1,13 @@
-//USAGE : ./name <filename_of_instructions> <PORT_NO_ISSUER>
-//compile with -lcrypto
-//For dump_mem comparison of Digests (uncomment dump_mem and compile with base64.o,cencode.o,cdecode.o)
+//USAGE : ./name <filename_of_instructions> <PORT_NO_ISSUER> <MODE(1/2)>
+//compile with -lcrypto 
+//For dump_mem comparison of Digests (uncomment dump_mem and compile with base64.o,cencode.o,cdecode.o) 
 
 /*
 TO-DO's :
 remove read_keypair
 create_keypair
-
+In Mode1_get_token from socket write json to json_message, and remove retrieveing json from file
+Remove hard-coded keys 
 */
 
 #include <string.h>
@@ -19,6 +20,7 @@ create_keypair
 #include <unistd.h>
 #include <sys/epoll.h>
 #include <errno.h>
+#include <unordered_map>
 
 #include <openssl/ec.h>
 #include <openssl/bn.h>
@@ -34,9 +36,13 @@ using namespace rapidjson;
 #define MACHINE_IP  inet_addr("127.0.0.1")
 #define PORT_ISSUER  49151
 #define PORT_VERIFIER 49157
+#define TOKEN_IDENTIFIER_SIZE 16 
 
 int port_verifier;
 int port_issuer;
+int run_mode;
+typedef unordered_map<string,string> map_tokens;
+typedef std::pair<string,string> record;
 
 std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems) {
 	std::stringstream ss(s);
@@ -299,7 +305,7 @@ int sign_token(const char *token_file , EC_KEY **ec_key, unsigned char **sig, un
 	return 0;
 }
 
-int access_resource( const char *resource_name, EC_KEY **ec_key)
+int mode1_access_resource( const char *resource_name, EC_KEY **ec_key)
 {
 
 	unsigned char *sig;
@@ -312,6 +318,116 @@ int access_resource( const char *resource_name, EC_KEY **ec_key)
 	get_token(resource_name, ec_key);
 	sign_token(token_file.c_str(), ec_key, &sig, &sig_len, &json_message, &json_length);
 	send_token(&sig, &sig_len, &json_message, &json_length);
+	return 0;
+}
+
+
+int mode2_send_token_identifier(char *token_identifier)
+{
+
+	int soc,response_length;
+	char response;
+	uint16_t port = port_verifier;
+
+	soc = socket(AF_INET, SOCK_STREAM, 0);
+
+	struct sockaddr_in connectAddress;
+	memset(&connectAddress, 0, sizeof(connectAddress));
+	connectAddress.sin_family = AF_INET;
+	connectAddress.sin_addr.s_addr = MACHINE_IP;
+	connectAddress.sin_port = htons(port);
+		
+	if(connect(soc, (struct sockaddr *) &connectAddress, sizeof(connectAddress)) < 0) {
+		printf("failed to connect: %s\n", strerror(errno));
+		//return 1;
+	}
+	
+	printf("SEND_TOKEN_IDENTIFIER: %s", token_identifier);
+	if(write(soc, token_identifier, TOKEN_IDENTIFIER_SIZE) < 0) {
+		printf("Failed to write to socket\n");
+		//return 1;
+	}
+	
+	if(read(soc, &response, 1) < 0) {
+		printf("Failed to read RESPONSE_LENGTH from socket\n");
+		//return 1;
+	}	
+	printf("RESPONSE : %c",response);
+	return 0;	
+
+}
+
+
+int mode2_get_token_identifier(const char *resource_name, EC_KEY **ec_key, char *token_identifier )
+{	
+	int soc,response_length;
+	char *response;
+	uint16_t port = PORT_ISSUER;
+
+	soc = socket(AF_INET, SOCK_STREAM, 0);
+	if (soc == -1)	{
+		printf("Socket Failed\n");
+		return 1;
+	}
+
+	struct sockaddr_in connectAddress;
+	memset(&connectAddress, 0, sizeof(connectAddress));
+	connectAddress.sin_family = AF_INET;
+	connectAddress.sin_addr.s_addr = MACHINE_IP;
+	connectAddress.sin_port = htons(port);
+
+
+	EC_GROUP* ec_group_new = EC_GROUP_new_by_curve_name(NID_X9_62_prime192v3);
+	const EC_GROUP *ec_group = ec_group_new;
+	const EC_POINT *ec_point = EC_KEY_get0_public_key(*ec_key);
+	BIGNUM *public_key;
+	point_conversion_form_t form = EC_GROUP_get_point_conversion_form(ec_group);
+	BN_CTX *ctx;
+	ctx = BN_CTX_new();
+	char *pub_hex = EC_POINT_point2hex(ec_group, ec_point, form, ctx);
+
+	//Create Message <Public_Key_in_Hex\nResource_Name>
+	char *message;
+	message = (char *) malloc(strlen(pub_hex) + strlen(resource_name) + 2);
+	strcat(message,pub_hex);
+	strcat(message, "\n");
+	strcat(message,resource_name);
+	printf("MESSAGE: \n%s\n",message);	
+
+		
+	if(connect(soc, (struct sockaddr *) &connectAddress, sizeof(connectAddress)) < 0) {
+		printf("failed to connect: %s\n", strerror(errno));
+		//return 1;
+	}
+	/*
+	if(write(soc, message, strlen(message)+1) < 0) {
+		printf("Failed to write to socket\n");
+		//return 1;
+	}
+
+	if(read(soc, token_identifier, TOKEN_IDENTIFIER_SIZE ) < 0) {
+		printf("Failed to read RESPONSE_LENGTH from socket\n");
+		//return 1;
+	}
+	
+	record r1 = 
+	map_table.insert()
+	
+	*/
+
+	return 0;
+	
+}
+
+
+
+
+int mode2_access_resource( const char *resource_name, EC_KEY **ec_key)
+{
+
+	char token_identifier[16];
+	mode2_get_token_identifier(resource_name, ec_key, token_identifier);
+	mode2_send_token_identifier(token_identifier);
 	return 0;
 }
 
@@ -356,7 +472,10 @@ void parse(string buffer, EC_KEY **ec_key)
 			string resource_name = *(++token_iterator);
 			printf("PORT : %d\n", port_verifier);
 			read_keypair("FIX_KEY", ec_key);
-			access_resource(resource_name.c_str(), ec_key);
+			if(run_mode == 1)
+				mode1_access_resource(resource_name.c_str(), ec_key);
+			else if(run_mode == 2)
+				mode2_access_resource(resource_name.c_str(), ec_key);
 		}
 		token_iterator++;
 	}
@@ -366,10 +485,15 @@ int main(int argc, char *argv[])
 {
 
 	EC_KEY *ec_key;
+	map_tokens token_table; 
+	
 	ifstream input_file(argv[1],std::ifstream::binary);
 	string buffer;
 
 	port_issuer = atoi(argv[2]);
+	
+	run_mode = atoi(argv[3]);
+	
 
 	while(!input_file.eof())
 	{
