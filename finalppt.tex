@@ -12,8 +12,8 @@
 
 \setbeamertemplate{navigation symbols}{}
 %\setbeamertemplate{footline}[frame number]
-\title[Main Title]{Main Title: very very extremely long title}
-\subtitle{subtitle}
+\title[Capability-Based Access Control]{Capability-Based Access Control}
+\subtitle{a survey}
 \author[k4iyer, ssasy, j3tracey]{K. Iyer \and S. Sasy \and J. Tracey}
 \institute[]{Cheriton School of Computer Science}
 \date{}
@@ -35,7 +35,7 @@
           \vfill
         \item Capabilities in OSs
           \vfill
-        \item Capabilities in Userspace
+        \item Capabilities in User space
           \vfill
         \item Our Implementation
           \vfill
@@ -174,7 +174,7 @@
     \vfill
   \item object/memory management (untyped $\rightarrow$ retyped)
     \vfill
-  \item virtual address space management (VSpace, platform-dependant)
+  \item virtual address space management (VSpace, platform-dependent)
     \begin{itemize}
     \item e.g. IA32: Page Directory $\rightarrow$ Page Tables $\rightarrow$ Frames
     \end{itemize}
@@ -183,7 +183,7 @@
     \vfill
   \item inter-process communication (IPC, endpoints)
     \vfill
-  \item device I/O management (ports, inturrupts, DMA address space)
+  \item device I/O management (ports, interrupts, DMA address space)
     \vfill
   \end{itemize}
 \end{frame}
@@ -219,13 +219,13 @@
 \end{frame}
 
 
-\begin{frame}{Barrelfish: Capability Operations Interaction}
-\begin{figure}
-		  \includegraphics[scale=0.25]{img/BF_revoke_retype}
-		  \caption{Revoke-Retype-Delete interactions}
+% \begin{frame}{Barrelfish: Capability Operations Interaction}
+% \begin{figure}
+% 		  \includegraphics[scale=0.25]{img/BF_revoke_retype}
+% 		  \caption{Revoke-Retype-Delete interactions}
 		  
-    \end{figure}   
-\end{frame}
+%     \end{figure}   
+% \end{frame}
 
 \begin{frame}{Capsicum: Overview}
 	\begin{itemize}
@@ -359,7 +359,48 @@
     % insert 1 diagram capBAC
 \end{frame}
 
+\begin{frame}{Implementation}
+Access control command language:
+\vfill
+\begin{itemize}
+\item Create\\
+  createc <name> <list of resources>\\
+  creater <resource>\\
+\vfill
+\item Remove\\
+  removec <name> <list of resources>\\
+  remover <resource>\\
+\vfill
+\item Access\\
+  access <name> <resource>
+\vfill
+\end{itemize}
 
+\end{frame}
+
+\begin{frame}{Implementation}
+\begin{itemize}
+\vfill
+\item Model 1 : Capability with Tagged Bits
+\vfill
+\item Model 2 : Capability with Tagged Type
+\vfill
+\end {itemize}
+\end{frame}
+
+\begin{frame}{Summary}
+  \begin{itemize}
+    \vfill
+  \item 4 types of capabilities
+    \vfill
+  \item kernel space capability systems
+    \vfill
+  \item user space capability systems
+    \vfill
+  \item common benchmarking mechanism
+    \vfill
+  \end{itemize}
+\end{frame}
 
 
 \end{document}
