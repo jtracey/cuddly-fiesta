@@ -42,6 +42,7 @@ int port_issuer;
 int run_mode;
 typedef unordered_map<string,string> map_tokens;
 typedef std::pair<string,string> record;
+map_tokens map_table;
 
 std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems) {
 	std::stringstream ss(s);
@@ -106,7 +107,6 @@ int get_token(const char *resource_name, EC_KEY **ec_key, char **json_message, s
 		//return 1;
 	}
 
-	/*
 	if(write(soc, message, strlen(message)+1) < 0) {
 		printf("Failed to write to socket\n");
 		//return 1;
@@ -114,13 +114,14 @@ int get_token(const char *resource_name, EC_KEY **ec_key, char **json_message, s
 	
 	char resp_byte;
 	int loc = 0;
-	while(read(soc, &resp_byte,1)
+	while(read(soc, &resp_byte,1))
 	{
 		(*json_message)[loc] = resp_byte;
 		loc++;
 	}
 	(*json_message)[loc] = '\0';
 
+	cout <<"RECIEVED_JSON_MESSAGE : " << json_message << endl;
 	if(read(soc, &response_length, 1) < 0) {
 		printf("Failed to read RESPONSE_LENGTH from socket\n");
 		//return 1;
@@ -130,7 +131,6 @@ int get_token(const char *resource_name, EC_KEY **ec_key, char **json_message, s
 		printf("Failed to read RESPONSE from socket\n");
 		//return 1;
 	}
-	*/
 
 	close(soc);
 	return 0;
@@ -328,14 +328,14 @@ int mode1_access_resource( const char *resource_name, EC_KEY **ec_key)
 
 	//Get token_file from get_token() to replace 'dummytoken'
 	string token_file("dummytoken");
-	get_token(resource_name, ec_key);
+	get_token(resource_name, ec_key, &json_message, &json_length);
 	sign_token(token_file.c_str(), ec_key, &sig, &sig_len, &json_message, &json_length);
 	send_token(&sig, &sig_len, &json_message, &json_length);
 	return 0;
 }
 
 
-int mode2_send_token_identifier(char *token_identifier)
+int mode2_send_token_identifier(char **token_identifier)
 {
 
 	int soc,response_length;
@@ -355,7 +355,7 @@ int mode2_send_token_identifier(char *token_identifier)
 		//return 1;
 	}
 
-	printf("SEND_TOKEN_IDENTIFIER: %s", token_identifier);
+	printf("SEND_TOKEN_IDENTIFIER: %s", *token_identifier);
 	if(write(soc, token_identifier, TOKEN_IDENTIFIER_SIZE) < 0) {
 		printf("Failed to write to socket\n");
 		//return 1;
@@ -371,8 +371,14 @@ int mode2_send_token_identifier(char *token_identifier)
 }
 
 
-int mode2_get_token_identifier(const char *resource_name, EC_KEY **ec_key, char *token_identifier )
+int mode2_get_token_identifier(const char *resource_name, EC_KEY **ec_key, char **token_identifier )
 {
+	
+	std::string map_key = std::to_string(port_verifier);
+	map_key.append(std::to_string(*resource_name));
+
+	if(map_table.find(map_key) == map_table.end())
+	{
 	int soc,response_length;
 	char *response;
 	uint16_t port = PORT_ISSUER;
@@ -428,11 +434,16 @@ int mode2_get_token_identifier(const char *resource_name, EC_KEY **ec_key, char 
 		printf("Failed to read RESPONSE_LENGTH from socket\n");
 		//return 1;
 	}
-
-	record r1 =
-	map_table.insert()
-
 	*/
+		
+	record r1 = make_pair(map_key, std::to_string(**token_identifier));
+	map_table.insert(r1);
+	}
+	else
+	{	
+	strcpy(*token_identifier,(*(map_table.find(map_key))).second.c_str());	
+	}
+
 
 	return 0;
 
@@ -444,9 +455,10 @@ int mode2_get_token_identifier(const char *resource_name, EC_KEY **ec_key, char 
 int mode2_access_resource( const char *resource_name, EC_KEY **ec_key)
 {
 
-	char token_identifier[16];
-	mode2_get_token_identifier(resource_name, ec_key, token_identifier);
-	mode2_send_token_identifier(token_identifier);
+	char *token_identifier;
+	token_identifier = (char *) malloc(TOKEN_IDENTIFIER_SIZE);
+	mode2_get_token_identifier(resource_name, ec_key, &token_identifier);
+	mode2_send_token_identifier(&token_identifier);
 	return 0;
 }
 
@@ -504,7 +516,6 @@ int main(int argc, char *argv[])
 {
 
 	EC_KEY *ec_key;
-	map_tokens token_table;
 
 	ifstream input_file(argv[1],std::ifstream::binary);
 	string buffer;
