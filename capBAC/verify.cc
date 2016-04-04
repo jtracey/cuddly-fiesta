@@ -407,6 +407,7 @@ int listen_block1(int soc, EC_KEY* authority_keys[]){
       fprintf(logfile, "network loop: failed to write to socket\n");
       exit(1);
     }
+    close(fd);
   }
   return 0;
 }
