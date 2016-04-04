@@ -225,7 +225,7 @@ int listen_block1(int soc)
         
     
 	    Document d;
-	    Value ii, nb, na, suv;
+	    Value ii, nb, na, suv, dev;
         char su[B64SIZE];
 		unsigned int now;
 	     
@@ -236,12 +236,13 @@ int listen_block1(int soc)
         nb.SetInt(now);
         na.SetInt(1600000000); 
         suv.SetString(pub_key, B64SIZE, d.GetAllocator());
+        dev.SetString(res_add, B64SIZE, d.GetAllocator());
     
         d.AddMember("id", "fake identifier", d.GetAllocator());
         d.AddMember("ii", ii, d.GetAllocator());
         d.AddMember("is", "fake issuer", d.GetAllocator());
         d.AddMember("su", suv, d.GetAllocator());
-        d.AddMember("de", "res_add", d.GetAllocator());
+        d.AddMember("de", dev, d.GetAllocator());
         d.AddMember("ar", "fake access rights", d.GetAllocator());
         d.AddMember("nb", nb, d.GetAllocator());
         d.AddMember("na", na, d.GetAllocator());
