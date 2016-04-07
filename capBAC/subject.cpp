@@ -129,7 +129,7 @@ int get_token(const char *resource_name, EC_KEY **ec_key, char **json_message, s
 	//Create Message <Public_Key_in_Hex\nResource_Name>
 	char *message;
 	message = (char *) malloc(B64SIZE + strlen(resource_name) + 2);
-	snprintf(message, B64SIZE, "%s", pub_key_b64);
+	snprintf(message, B64SIZE+1, "%s", pub_key_b64);
 	strcat(message, "\n");
 	strcat(message,resource_name);
 	printf("MESSAGE: \n%s\n",message);
@@ -193,8 +193,8 @@ int send_token(unsigned char **sig, unsigned int *sig_len, char **json_message, 
 		//return 1;
 	}
 
-	printf("SEND_TOKEN : %s",*json_message);
-	if(write(soc, *json_message, (*json_length)) < 0) {
+	printf("SEND_TOKEN : %s\n",*json_message);
+	if(write(soc, *json_message, (*json_length)+1) < 0) {
 		printf("Failed to write to socket\n");
 		//return 1;
 	}
@@ -217,7 +217,7 @@ int send_token(unsigned char **sig, unsigned int *sig_len, char **json_message, 
 	 */
 
 close(soc);
-printf("RESPONSE : %c",response);
+printf("RESPONSE : %c\n",response);
 return 0;
 
 }
@@ -386,7 +386,7 @@ int mode2_send_token_identifier(char **token_identifier)
 		//return 1;
 	}
 
-	printf("SEND_TOKEN_IDENTIFIER: %s", *token_identifier);
+	printf("SEND_TOKEN_IDENTIFIER: %s\n", *token_identifier);
 	if(write(soc, token_identifier, TOKEN_IDENTIFIER_SIZE) < 0) {
 		printf("Failed to write to socket\n");
 		//return 1;
@@ -396,7 +396,7 @@ int mode2_send_token_identifier(char **token_identifier)
 		printf("Failed to read RESPONSE_LENGTH from socket\n");
 		//return 1;
 	}
-	printf("RESPONSE : %c",response);
+	printf("RESPONSE : %c\n",response);
 	return 0;
 
 }
