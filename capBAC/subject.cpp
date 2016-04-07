@@ -326,7 +326,7 @@ int sign_token(const char *token_file , EC_KEY **ec_key, unsigned char **sig, un
 	}
 	mdctx = EVP_MD_CTX_create();
 	EVP_DigestInit_ex(mdctx, md, NULL);
-	EVP_DigestUpdate(mdctx, *json_message, (*json_length)-1);
+	EVP_DigestUpdate(mdctx, *json_message, (*json_length));
 	EVP_DigestFinal_ex(mdctx, md_value, &md_len);
 	EVP_MD_CTX_destroy(mdctx);
 
