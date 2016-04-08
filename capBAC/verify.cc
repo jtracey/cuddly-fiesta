@@ -33,8 +33,8 @@ FILE* logfile;
 
 volatile sig_atomic_t done = 0;
 void term(int signum){
-    done = 1;
-    printf("caught signal: %d\n", signum);
+  done = 1;
+  printf("caught signal: %d\n", signum);
 }
 
 bool verify_outer_sig(const char* json, const unsigned char* sig, int sig_len, char* su) {
@@ -93,6 +93,8 @@ bool verify_outer_sig(const char* json, const unsigned char* sig, int sig_len, c
   fprintf(logfile, "DEBUG: verify_outer_sig: outer verification complete...\n");
   fprintf(logfile, "digest: ");
   dump_mem(md_value, md_len);
+  fprintf(logfile, "sig: \n");
+  dump_mem(sig, sig_len);
   BN_CTX *ctx;
   ctx = BN_CTX_new();
   if(!ctx) {
@@ -104,7 +106,7 @@ bool verify_outer_sig(const char* json, const unsigned char* sig, int sig_len, c
 				      x, y, ctx);
   BN_CTX_free(ctx);
   fprintf(logfile, "x : %s\ny : %s\n",
-	 BN_bn2hex(x), BN_bn2hex(y));
+	  BN_bn2hex(x), BN_bn2hex(y));
 #endif
 
   free(key);
@@ -119,7 +121,6 @@ bool verify_inner_sig(Document* d, EC_KEY* keys[]) {
   unsigned char md_value[EVP_MAX_MD_SIZE];
   unsigned int md_len;
   int ret;
-  EC_KEY* key;
   char sig64[B64SIZE];
   ECDSA_SIG *sig;
 
@@ -184,15 +185,15 @@ bool is_valid(Document* d) {
   if((*d)["ii"].GetInt() > (*d)["nb"].GetInt()) {
 #ifdef DEBUG
     fprintf(logfile, "DEBUG: invalid timing: ii > nb (%d > %d)\n",
-	   (*d)["ii"].GetInt(), (*d)["nb"].GetInt());
+	    (*d)["ii"].GetInt(), (*d)["nb"].GetInt());
 #endif
     return false;
   }
   unsigned int now = time(NULL);
-  if(now < (*d)["nb"].GetInt() || now > (*d)["na"].GetInt()) {
+  if(now < (*d)["nb"].GetUint() || now > (*d)["na"].GetUint()) {
 #ifdef DEBUG
     fprintf(logfile, "DEBUG: invalid timing: %d, %d, %d (nb, na, now)\n",
-	   (*d)["nb"].GetInt(), (*d)["na"].GetInt(), now);
+	    (*d)["nb"].GetInt(), (*d)["na"].GetInt(), now);
 #endif
     return false;
   }
@@ -231,10 +232,10 @@ int process_request(const char* json, const unsigned char* sig, int sig_len, EC_
   return 0;
 }
 
-unsigned char mode2_process(char record[17], token_store* capabilities, EC_KEY* authority_keys[]){
-  #ifdef DEBUG
+unsigned char mode2_process(char record[17], token_store* capabilities){
+#ifdef DEBUG
   fprintf(logfile, "DEBUG: processing request, parsing request...\n");
-  #endif
+#endif
   Document d;
   token_store::const_iterator it = capabilities->find(record);
   if(it == capabilities->end()) return 1;
@@ -243,16 +244,16 @@ unsigned char mode2_process(char record[17], token_store* capabilities, EC_KEY* 
     fprintf(logfile, "invalid json: %s\n", record_s.c_str());
     return 1;
   }
-  #ifdef DEBUG
+#ifdef DEBUG
   fprintf(logfile, "DEBUG: json parsed, checking validity...\n");
-  #endif
+#endif
   if(!is_valid(&d)) {
     capabilities->erase(it);
     return 1;
   }
-  #ifdef DEBUG
+#ifdef DEBUG
   fprintf(logfile, "DEBUG: request valid\n");
-  #endif
+#endif
   return 0;
 }
 
@@ -260,7 +261,7 @@ unsigned char mode2_process(char record[17], token_store* capabilities, EC_KEY* 
 char* get_json(int fd) {
   char* json;
   size_t size = TOKENSIZE;
-  int offset;
+  unsigned int offset;
 
   json = (char*) realloc(NULL, sizeof(char)*size);
   if(!json) {
@@ -268,9 +269,8 @@ char* get_json(int fd) {
     exit(1);
   }
 
-  offset = -1;
+  offset = 0;
   do {
-    offset++;
     if (offset == size) {
       json = (char*) realloc(json, sizeof(char)*(size += 16));
       if(!json) {
@@ -287,7 +287,8 @@ char* get_json(int fd) {
 #endif
       exit(1);
     }
-  } while (json[offset] != 0);
+    offset++;
+  } while (json[offset-1] != 0);
 
 #ifdef DEBUG
   fprintf(logfile, "DEBUG: get_json: json at %p: %s\n", json, json);
@@ -354,6 +355,7 @@ int listen_nonblock(uint16_t port){
   }
 
   // TODO: do things with epoll events
+  return 0;
 }
 
 
@@ -413,7 +415,7 @@ int listen_block1(int soc, EC_KEY* authority_keys[]){
 }
 
 int listen_block2(int soc, EC_KEY* authority_keys[]){
-  int fd, sig_len;
+  int fd;
   socklen_t peer_addr_size = sizeof(struct sockaddr_in);
   char record[17];
   char* json;
@@ -451,9 +453,9 @@ int listen_block2(int soc, EC_KEY* authority_keys[]){
       fprintf(logfile, "DEBUG: network loop: record is null, getting json...\n");
 #endif
       json = get_json(fd);
-      #ifdef DEBUG
+#ifdef DEBUG
       fprintf(logfile, "DEBUG: network loop: json recieved, readying token store...\n");
-      #endif
+#endif
       response = store_token(json, &capabilities, authority_keys);
       if(response == 0) {
 	fprintf(logfile, "capability stored\n");
@@ -467,7 +469,7 @@ int listen_block2(int soc, EC_KEY* authority_keys[]){
       }
     }
     else {
-      response = mode2_process(record, &capabilities, authority_keys);
+      response = mode2_process(record, &capabilities);
       if(response == 0) {
 	fprintf(logfile, "request processed\n");
       }
@@ -484,7 +486,7 @@ int listen_block2(int soc, EC_KEY* authority_keys[]){
 }
 
 int bootstrap_network(const char* port_s) {
-  int soc, fd;
+  int soc;
   uint16_t port;
   struct sockaddr_in bindAddress;
 
@@ -494,7 +496,6 @@ int bootstrap_network(const char* port_s) {
     fprintf(logfile, "bootstrap: Failed to open socket\n");
     exit(1);
   }
-
 
   memset(&bindAddress, 0, sizeof(bindAddress));
   bindAddress.sin_family = AF_INET;
@@ -517,7 +518,6 @@ int bootstrap_network(const char* port_s) {
 EC_KEY** get_auth_keys() {
   int auth_key_count = 1;
   EC_KEY** authority_keys;
-  EC_POINT* point_buffer;
   BN_CTX *ctx;
 
   ctx = BN_CTX_new();
@@ -535,7 +535,6 @@ EC_KEY** get_auth_keys() {
     }
   }
 
-  //const char private_key[] = "F2506E09D4153EED5ACBE1D620C93CA0D5580EF41AC0A401";
   const char public_key[] = "027134EE605CB10FAE017BDD9FD88C96C8C080F08271637BB1";
   EC_KEY_set_public_key(authority_keys[0],
 			EC_POINT_hex2point(EC_KEY_get0_group(authority_keys[0]),
@@ -552,7 +551,6 @@ void verify_run_mode(const char* argv[]) {
   logfile = fopen(logfile_name, "wa");
   EC_KEY** auth_keys = get_auth_keys();
   int soc = bootstrap_network(argv[3]);
-
 
   if(!strcmp(argv[2], "1"))
     listen_block1(soc, auth_keys);

@@ -27,11 +27,10 @@ void encode(char out[B64SIZE], const unsigned char* input) {
 
 void decode(unsigned char out[BINSIZE], const char* input) {
   char* c =  (char*) out;
-  int cnt = 0;
   base64_decodestate s;
 
   base64_init_decodestate(&s);
-  cnt = base64_decode_block(input, B64SIZE, c, &s);
+  base64_decode_block(input, B64SIZE, c, &s);
 
   return;
 }
@@ -40,7 +39,6 @@ void decode(unsigned char out[BINSIZE], const char* input) {
 void base64encode(char out[B64SIZE], const BIGNUM* bn1, BIGNUM* bn2) {
   unsigned char buf[BINSIZE];
   unsigned char *bi1, *bi2;
-  BUF_MEM *bufferPtr;
   int r1, r2;
 
   bi1 = buf;
@@ -69,7 +67,6 @@ void base64encode(char out[B64SIZE], const BIGNUM* bn1, BIGNUM* bn2) {
   }
 
   encode(out, buf);
-
   return;
 }
 

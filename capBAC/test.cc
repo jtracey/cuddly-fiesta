@@ -37,12 +37,12 @@ int test_net(const char* port_s, const char* message, const unsigned char* sig, 
   }
 
   if(write(soc, message, strlen(message)+1) < 0) {
-      printf("failed to write to socket\n");
-      return 1;
+    printf("failed to write to socket\n");
+    return 1;
   }
   if(write(soc, sig, sig_len) < 0) {
-      printf("failed to write to socket\n");
-      return 1;
+    printf("failed to write to socket\n");
+    return 1;
   }
   if(read(soc, &response, 1) < 0) {
     printf("failed to read from socket\n");
@@ -73,14 +73,14 @@ int test_net2(const char* port_s, const char* message, const unsigned char* sig,
   // Tell verify we are an authority by sending size 17 empty string (i.e. null bytes)
   // (don't panic, verify checks the signature as well :) )
   if(write(soc, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 17) < 0) {
-      printf("failed to write to socket\n");
-      return 1;
+    printf("failed to write to socket\n");
+    return 1;
   }
 
   // Give the token
   if(write(soc, message, strlen(message)+1) < 0) {
-      printf("failed to write to socket\n");
-      return 1;
+    printf("failed to write to socket\n");
+    return 1;
   }
 
   // Check if the token was stored (0 good, 1 bad)
@@ -106,8 +106,8 @@ int test_net2(const char* port_s, const char* message, const unsigned char* sig,
 
   // our completely random token identifier we got from the authority
   if(write(soc, "fake identifier", 16) < 0) {
-      printf("failed to write to socket\n");
-      return 1;
+    printf("failed to write to socket\n");
+    return 1;
   }
 
   // Check if the token was accepted (0 good, 1 bad)
@@ -142,8 +142,8 @@ int inner_sig(Document* d) {
 
   auth_key = EC_KEY_new_by_curve_name(NID_X9_62_prime192v3);
   if (auth_key == NULL) {
-      printf("failed to initialize curve\n");
-      return 1;
+    printf("failed to initialize curve\n");
+    return 1;
   }
 
   EC_KEY_set_public_key(auth_key,
@@ -242,7 +242,7 @@ int test_sigs(const char* port) {
   if(BN_cmp(x, x2) != 0 || BN_cmp(y, y2) != 0) {
     printf("values differ\n");
     printf("b64: %s\nx : %s\nx2: %s\ny : %s\ny2: %s\n", su,
-	 BN_bn2hex(x), BN_bn2hex(x2), BN_bn2hex(y), BN_bn2hex(y2));
+	   BN_bn2hex(x), BN_bn2hex(x2), BN_bn2hex(y), BN_bn2hex(y2));
     return 1;
   }
 

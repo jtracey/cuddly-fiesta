@@ -3,9 +3,6 @@
 #include <string.h>
 
 int main(int argc, const char* argv[]){
-  char *json;
-  unsigned char *sig;
-
   if(argc < 2) {
     printf("Insufficient arguments\n");
     return 1;
