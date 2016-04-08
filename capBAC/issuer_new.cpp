@@ -195,7 +195,7 @@ int get_request(int fd) {
   nb.SetInt(now);
   na.SetInt(1600000000);
   suv.SetString(pub_key, strlen(pub_key), d.GetAllocator());
-  dev.SetString(res_add, (offset - B64SIZE -1), d.GetAllocator());
+  dev.SetString(res_add, strlen(res_add), d.GetAllocator());
 
   d.AddMember("id", "fake identifier", d.GetAllocator());
   d.AddMember("ii", ii, d.GetAllocator());
