@@ -42,6 +42,7 @@ int run_mode;
 typedef unordered_map<string,string> map_tokens;
 typedef std::pair<string,string> record;
 map_tokens map_table;
+map_tokens resource_to_json;
 
 std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems) {
   std::stringstream ss(s);
@@ -296,13 +297,28 @@ int mode1_access_resource( const char *resource_name, EC_KEY **ec_key)
   unsigned int sig_len;
   size_t json_length;
   char *json_message;
+  unordered_map<string,string>::iterator iter;
 
+  if((iter = resource_to_json.find(string(resource_name))) == resource_to_json.end()) { 
+  printf("\nNot found in map : sending for new token\n");
   get_token(resource_name, ec_key, &json_message);
-
   cout<< "\nJSON_MESSAGE_RECIEVED : " << json_message << endl;
   json_length = strlen(json_message);
-  sign_token(ec_key, &sig, &sig_len, &json_message, &json_length);
+  //record r1 = make_pair(string(resource_name), string(json_message));  
+  string *res_name = new string(resource_name);
+  string *json_token = new string(json_message);
+  record r1 = make_pair(*res_name, *json_token);
+  resource_to_json.insert(r1);
+  }
+  else {
+  cout<<"\nLOAD_TOKEN_FROM_TABLE :\n";
+  json_message = (char *) malloc ((*iter).second.length());
+  strcpy(json_message, (*iter).second.c_str());
+  json_length = strlen(json_message);
+  //Insert Token Expiry Validation Check here 
+  }
 
+  sign_token(ec_key, &sig, &sig_len, &json_message, &json_length);
   send_token(&sig, &sig_len, &json_message, &json_length);
   return 0;
 }
@@ -480,7 +496,7 @@ int main(int argc, char *argv[])
 
   port_issuer = atoi(argv[2]);
   run_mode = atoi(argv[3]);
-
+	
   while(!input_file.eof())
     {
       getline(input_file, buffer);
