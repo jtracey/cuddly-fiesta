@@ -406,13 +406,19 @@ int mode2_get_token_identifier(const char *resource_name, EC_KEY **ec_key, char 
 	printf("failed to connect: %s\n", strerror(errno));
       }
 
+     if(write(soc, message, strlen(message)+1) < 0) {
+	printf("Failed to write to socket\n");
+      }
+
       record r1 = make_pair(map_key, std::to_string(**token_identifier));
       map_table.insert(r1);
-    }
+      close(soc);
+   }
   else
     {
       strcpy(*token_identifier,(*(map_table.find(map_key))).second.c_str());
     }
+
 
 
   return 0;
