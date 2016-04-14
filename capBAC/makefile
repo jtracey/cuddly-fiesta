@@ -29,8 +29,8 @@ verify.debug.o: verify.cc
 client.o: subject.cpp
 	g++ -std=c++11 -c subject.cpp -o client.o
 
-auth.o: issuer_new.cpp
-	g++ -std=c++11 -c issuer_new.cpp -o auth.o
+auth.o: auth.cpp
+	g++ -std=c++11 -c auth.cpp -o auth.o
 
 base64.o: base64.cc
 	g++ -c base64.cc -o base64.o
