@@ -1,8 +1,65 @@
-\section{introduction}
-\label{sec:introduction}
-<Justin>
-\begin{itemize}
-\item introduction
-\item access control 
-\item capability based access control
-\end{itemize}
+\section{Introduction}
+\label{sec:Introduction}
+Capabilities are a compelling means of access control in digital systems. As such, they have seen much interest in computer science research, as well as usage in real systems ranging from distributed file systems to entire operating systems. However, as the design of existing and desirable systems changes, the design decisions with regards to access control must change as well. While research and implementations have to some extent addressed new problems and goals as they have arisen, these lines of work have primarily focused on their own utility, without much attention given to alternatives. In particular, there is a surprising lack of comparative study in the performance impact various design decisions have in existing access control solutions, and capabilities are no exception.
+
+In order to decide how an access control system should be implemented, it would stand to reason that one must first have an understanding not only of the mechanisms that system would provide, but also the advantages and disadvantages of particular design decisions compared to other systems. Towards that end, we seek to examine the differences between various options of capability-based access control systems, both in practice, and in high-level design. To do so, we present in this paper an examination of some deployed capability systems, as well as a means of providing comparative performance results from a customizable workload.
+
+In this section, we provide some background on access control, so as to provide a better understanding of the purpose and background of capability systems. Then, we give more detail on what capabilities specifically are, and what advantages they bring. In Section II, we give some specific examples and details on how capabilities have been used in kernels. Then, in Section III, we give examples of capabilities that are implemented in the user space level of systems. We then give a description of our experimentation on capability structures, followed by some concluding remarks.
+
+\subsection{Access Control}
+Sufficiently complicated systems must have some means of keeping track of resources. Who has access to what resource and under what conditions is a non-trivial problem that exists in a myriad of contexts, from management of physical locations to management of intelligence. Management of these resources, to some extent, can be used to analogously manage computer systems, but were generally insufficiently formalized to create the guarantees desired for systems like operating systems. To address this, precise models known as {\em access control systems} were created.
+
+While details may vary, access control is primarily concerned with the interaction between two or three types of entities: an {\em object} (or {\em resource}), a {\em subject} (or {\em client}), and optionally, an {\em authority}. The object is the particular resource for which access is being determined by the access control system. Examples include a particular file in a file system, output from a sensor, and an address range in memory. The subject is the entity that is being granted or denied access. This may be anything from a human user, to a particular process or thread, or a physical device. The authority is the entity which is granting (or denying) the subject the ability to access the object. In practice, there typically exists some authority, such as the kernel or a user space program that manages the access control. However, strictly speaking, no authority is necessary, and often (particularly in theoretical constructions), any action an authority may implicitly be able to perform is instead represented as an object that another subject has access to (e.g. there may be a ``grant access to object $o$'' object).
+
+The relationship between these entities may be represented as an {\em access matrix}.\cite{lampson1971} In such a representation, the rows correspond to subjects, while the columns correspond to objects. No authority is explicitly represented in the matrix, but it would be responsible for populating or enforcing the rules of the matrix. Within each cell of the matrix are the actions a the respective subject may take on the respective object. (The original paper describes these cells as ``capabilities,'' though this is not exactly how terminology used today.) An example of such a matrix may be found in table~\ref{acmatrix}. In it, the user Carol has read and execute permissions on File 2, and no permissions on File 3. 
+
+Because of the sparsity of the matrix, it is generally wasteful to store it in its entirety as a table. Instead, the matrix is typically stored as the columns of the table (e.g. in table~\ref{acmatrix}, there would exist an entry for File 1, which would store the fact that Alice has read and write permissions, and Carp; has read permissions), which is known as an {\em Access Control List} (or ACL), or as the rows of the matrix (e.g. there exists an entry for Carol, which would store the fact that she has read permissions on File 1, and read and execute permissions on File 2), which is known as a capability-based system.
+
+\begin{table}[t]
+  \centering
+  \begin{tabular}{|l||c|c|c|}
+    \hline
+    &File 1&File 2&File 3\\
+    \hline
+    \hline
+    Alice&rw&rx&rwx\\
+    \hline
+    Bob&&rx&\\
+    \hline
+    Carol&r&rx&\\
+    \hline
+  \end{tabular}
+  \caption{An example access control table.}
+  \label{acmatrix}
+\end{table}
+
+\subsection{Capability-Based Access Control}
+
+Now that the purpose and general categorization of access control systems are understood, we will now describe some more details of the theoretical backing of capability-based systems, and what their advantages are over access control lists.
+
+As previously stated, capability-based systems are a type of access control, in which the actions a subject may take with all objects that subject has been granted permission to interact with are stored. The structure in which this information is stored is referred to as a {\em capability}. In order for a subject to access an object, it must use a token that corresponds to the appropriate capability. What form this token takes, and how the capability itself is stored, varies depending on the implementation.
+
+Strictly speaking, with an access control matrix that is fine-grained enough to represent all possible combinations of subject and object, and a set of explicitly defined rules to determine how the matrix is populated, there is no operation that can be performed in a system based on ACLs that could not be performed via capabilities, and vice versa. In practice, however, capabilities tend to be much more powerful and versatile.~\cite{miller2003} To understand why this is, we must first understand how capability-based systems operate, as well as some of the limitations of ACLs.
+
+Capability-based systems are typically based, at least loosely, on theoretical models that represent a set of capability rules. One of the most well known of these is the {\em take-grant} scheme, where authority over an object can be granted or denied according to specific rules.\cite{lipton1977} These models are useful in that they can be used to prove that all potential capability distributions behave certain rules, in an efficient manner. For example, given that the state of all capabilities is $N$ at this point in time, the system can prove in linear time that subject $s$ will never be able to access data from object $o$, regardless of how the subjects use or grant their capabilities starting from $N$ (so long as the rules of the system are followed, e.g. a subject can't grant a capability for an object to another subject when it wasn't supposed to). Using these theoretical frameworks makes reasoning about the security of systems and the guarantees they provide much simpler.
+
+There are four general categories of capability systems in practice, differentiated by how capabilities and their tokens are represented: {\em tagged with tag bits}, {\em tagged with type system}, {\em segregated}, and {\em password} (or {\em sparse}).~\cite{nevillmasters} As a baseline comparison, we also describe access control lists.
+
+{\bf Access Control List (ACL):} A list of all subjects with access to the object is stored. This typically takes the form of the object itself storing a list of subjects, and what actions that subject is and is not allowed to perform with the resource. This allows for operations like removing permissions for all subjects from the object to be relatively simple, while making other actions like removing all permissions for a particular subject to all objects very difficult.
+
+An example of an ACL would be how typical Unix file permissions work. With each file, there is some metadata stored, containing which user owns a file, and which group is associated with a file. With each of these, the relevant permissions (read, write, or execute) are stored as well. This means it is relatively simple to change the permissions on a file to no longer allow anyone (or to allow everyone) to read it, but also means that changing the owner of all files of a particular user would require traversing the entire file system and identifying the files that user owns. 
+
+{\bf Tagged with tag bits:} In these systems, the capability is stored within the actual token, while the object itself has no inherent knowledge of any capabilities. Every time a capability is used, the system must verify that the capability that was received with the token is valid (note that the verification could occur through the authority or the resource itself, though). If the system wished to revoke or change all capabilities for a particular object, it would require somehow finding every capability in the entire system, which is generally viewed as infeasible. 
+
+{\bf Tagged with type system:} Similar to “Tagged with tag bits,” only the capability is represented as metadata structure that references the actual resource, as well as which components of the resource are additional capabilities. When a request is made for the resource, it instead requests the capability structure, which the system can then check and use to access the resource. This makes modification of capabilities referring to an object (via a capability metadata object) simpler. For example, if Alice, Bob, and Carol all have capabilities to the same object via the same capability metadata object, then modifying the capabilities of that one metadata object will modify the capabilities for all three (contrast this with the ``Tagged with bits'' method, where this would require modifying the capabilities of each user individually).
+
+{\bf Segregated:} All capabilities are stored in a protected region of memory, individual to each subject. Subjects can store pointers into these capabilities, but cannot access them directly, and must instead make system calls to modify them, which can enforce the access control policy. Capabilities can be shared, but only through the aforementioned system calls, which copy the capabilities to the respective region of memory for the target entity.
+
+{\bf Password/sparse:} Similar to segregated capabilities, but all subjects share one region of memory. While access and modification are still controlled by the access control policy implemented by the system, capabilities can be shared with other subjects directly, by giving the address to where the capability is stored. To prevent malicious entities from brute-forcing all possible capabilities, a “password” field is commonly used as an additional requirement to gain access to the capability. Otherwise, the system would have no way of differentiating between capabilities that were legitimately shared, and those that were guessed.
+
+While the majority of actual capability-based systems fall into one of these categories, it is conceivable that other structures may exist (at the very least, any of these categories could be modified to be made arbitrarily more complicated). What benefits and drawbacks these or other types of capability-based systems bring can and has been reasoned about to some extent, as described above, but the true limits and performance differences between them remain largely unmeasured. 
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "main"
+%%% End:
