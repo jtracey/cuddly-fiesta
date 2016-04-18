@@ -12,7 +12,44 @@ The language is composed of the following 6 instructions :
 \item remover $\langle$resource name$\rangle$
 \item revoke $\langle$client name$\rangle$ $\langle$list of resources$\rangle$
 \end{itemize}   
-Although we did limit revocation to a time out mechanism and hence did not make use of that instruction
+Although we did limit revocation to a time out mechanism and hence did not make use of that instruction.
+
+With respect to our model, we tried to implement the capability types mentioned in Section: \ref{sec:Introduction}. The key participants of the system are: issuer which is an authority granting the capability tokens, the subject which is a client requesting the access to a resource, and device which is the actual resource in question. Based on this framework, the basic formation of the different types or modes would be as follows:
+\begin{enumerate}
+\item Mode 1 (Tagged with tag bits):
+	\begin{enumerate}
+		\item subject requests capability from issuer
+		\item issuer gives token to subject
+		\item subject requests device by sending token (w/ metadata)
+		\item device responds
+	\end{enumerate}
+	
+\item Mode 2 (Tagged with type system):
+	\begin{enumerate}
+		\item subject requests capability from issuer
+		\item issuer gives token number to subject, and capability to device
+		\item subject requests device by sending simple token
+		\item device looks at relevant capability metadata; responds
+	\end{enumerate}
+
+\item Mode 3 (Segregated):
+	\begin{enumerate}
+		\item subject requests capability from issuer
+		\item issuer keeps capability itself; replies with token
+		\item subject requests device via issuer, sending token and identifying itself
+		\item issuer establishes connection between subject and device
+	\end{enumerate}
+
+\item Mode 4 (Password/sparse):
+	\begin{enumerate}
+		\item subject requests capability from issuer
+		\item issuer keeps cap itself; replies with token and password
+		\item subject requests device via issuer, sending token and password
+		\item issuer establishes connection between subject and device
+	\end{enumerate}
+\end{enumerate}
+
+We implemented this design in C++ using RapidJSON \footnote{http://rapidjson.org/} for parsing and generating the capability tokens. In order to obtain secure connection between the issuer/ subject/ devices, we implemented the SSL protocol using the general purpose cryptography library \footnote{https://www.openssl.org/}. In the following section we discuss the results we obtained by running our capBAC system in Mode1 and Mode2. 
 
 \section{Results}
 \label{sec:results}
