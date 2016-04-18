@@ -27,13 +27,15 @@ until [ $PORT -ge $MAX_PORT ]; do
 done
 
 # start 1 authority
+./auth 49151 1 2>&1 logs/auth_log &
+APID=$!
 
 # start m clients
 M=5
 START=`date +%s`
 CLOCK_TIME=5 # time in seconds to run requests
 echo running requests for $CLOCK_TIME seconds...
-./client <(echo createc sajin && yes access 49152 token.json) 49151 > logs/client_log 2>&1 &
+./client <(echo createc file2.txt && yes access 49152 token.json) 49151 1 > logs/client_log 2>&1 &
 #./client <(echo createc sajin && yes access 49152 token.json $'\n'access 49153 token.json $'\n'access 49154 token.json) 49151 > logs/client_log 2>&1 &
 #./client commands 49151 > /dev/null 2>&1 &
 sleep $CLOCK_TIME
@@ -45,3 +47,4 @@ until [ $PORT -ge $MAX_PORT ]; do
     kill ${VPIDS[$PORT]}
     let PORT=$PORT+1
 done
+kill APID
