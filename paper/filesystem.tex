@@ -27,16 +27,16 @@ On a high level, OrangeFS uses a certificate based security consists of two main
 
 \begin{figure}[h]
 \centering
-%\includegraphics[scale = 0.2]{orange}
+\includegraphics[scale = 0.2]{img/orange}
 \caption{OrangeFS Architecture}
-\label{fig:orange}
+\label{orange}
 \end{figure}
 
 Another entity involved in this system, is the Lightweight Directory Access Protocol(LDAP) directory which stores user objects (such as UID and GID to evaluate access rights). The Subject DN from the certificate is used to uniquely identify users in LDAP directory, and OrangeFS servers interact with LDAP servers to obtain the user information to enforce the desired access control. 
 
 In every system that makes use of certificates for security must have a root(or roots) of trust, which can be used to issue valid certificates for other entities in the system. In OrangeFS, the trusted root certificate is called a Certificate Authority(CA) certificate, and is securely stored across each OrangeFS servers to sign and validate user certificates. Every user must have a valid user certificate (and the corresponding private key to the public key signed in their certificate) which is signed by the CA certificate. OrangeFS uses the term credential for a signed user certificate, and capabilities are signed objects containing permissions for file system objects.
 
-As seen in Fig. \ref{fig:orange}, capability based access control can be explained in a 4 step process:
+As seen in Fig. \ref{orange}, capability based access control can be explained in a 4 step process:
 \begin{enumerate}
 \item To perform a request, client sends its credential along with request to the server.
 \item Server verifies credentials signature and fetches corresponding user information from the LDAP server for the subject DN in the user certificate. 
@@ -54,9 +54,9 @@ Irrespective of the type of file, all files in TahoeLAFS undergo erasure coding 
 
 \begin{figure}[h]
 \centering
-%\includegraphics[scale = 0.2]{immutable}
+\includegraphics[scale = 0.2]{img/immutable}
 \caption{Immutable Files in TahoeLAFS}
-\label{fig:immutable}
+\label{immutable}
 \end{figure}
 
 In TahoeLAFS, each immutable file has two associated capabilities, the read capability called as the \textit{read-cap} and verify capability or 
@@ -65,14 +65,14 @@ In TahoeLAFS, each immutable file has two associated capabilities, the read capa
 \item If integrity check fails, client needs to isolate the erasure code shares that were wrong, for which a Merkle tree is constructed over the erasure code shares, allowing client verification of each share involved.
 \item However just the Merkle Tree over erasure code shares is not sufficient as that does not link the shares to the original file content\footnote{the creator of the file could generate erasure code shares from two different files and use the shares from both in the set of N shares covered by the Merkle Tree, resulting in a different file depending on the subset of shares used to reconstruct}, and hence another Merkle Tree is constructed over the ciphertext itself.
 \end{itemize}
-Now, as seen in Fig.\ref{fig:immutable} the roots of both the Merkle Trees are kept on each server alongside the shares, and is called as the 'Capability Extension Block' \footnote{Logically should be part of the capability but maintained on the servers to minimize capability size}. The verify-cap is now the secure hash of the Capability Extension Block, and the read-cap to an immutable file is the verify-cap along with the original symmetric encryption key. Thus allowing the clients with the read-cap to simply pass on the verify-cap component to other clients when it wants to give it a diminished form of it's capability, moreover since the file is encrypted with the symmetric key prior to storing on to the servers, the servers themselves cannot read the data, and any attempts to modify would break the integrity check done by the verify-cap.
+Now, as seen in Fig.\ref{immutable} the roots of both the Merkle Trees are kept on each server alongside the shares, and is called as the 'Capability Extension Block' \footnote{Logically should be part of the capability but maintained on the servers to minimize capability size}. The verify-cap is now the secure hash of the Capability Extension Block, and the read-cap to an immutable file is the verify-cap along with the original symmetric encryption key. Thus allowing the clients with the read-cap to simply pass on the verify-cap component to other clients when it wants to give it a diminished form of it's capability, moreover since the file is encrypted with the symmetric key prior to storing on to the servers, the servers themselves cannot read the data, and any attempts to modify would break the integrity check done by the verify-cap.
 %footnote about choosing key can be based on the hash of plaintext of the file - convergent encryption
 
 \begin{figure}[h]
 \centering
-%\includegraphics[scale = 0.2]{mutable}
+\includegraphics[scale = 0.2]{img/mutable}
 \caption{Mutable Files in TahoeLAFS}
-\label{fig:mutable}
+\label{mutable}
 \end{figure}
 
 For mutable files the underlying process is significantly different and more convoluted to take care of the three desired capabilities \textit{read-write-cap}, textit{read-only-cap} and \textit{verify-cap}. Each mutable file is associated with an RSA key pair( with private key SK), a client first computes the write key, WK = SHA256d(SK) and corresponding read key, RK = SHA256d(WK). To write, a client generates a new 16 byte salt, and computes the encryption key with EK = H(RK,salt). A similar process for integrity verification is performed over the ciphertext, by computing a Merkle Tree over the erasure coded shares of the ciphertext, and the client signs the root hash of the Merkle Tree as well as the salt, with the private key SK. So the verify-cap for mutable files are the secure hash of verifying key : VC = SHA256d(VK), hence allowing clients with verify-cap to check that the verifying key which is stored on the server is the right one. The read-only cap to a mutable file include VC, and the read key RK(RC = VC,RK), while the read-write-cap to a mutable file includes VC and the write key WK (WC = VC,WK). However the owners of read-write-cap still need to be able to produce digital signatures on new versions for which the signing key SK is stored on the server encrypted with WK which is only available to the clients with read-write-cap. 

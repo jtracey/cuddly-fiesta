@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-2.5-1.40.14 (TeX Live 2013/Debian) (format=pdflatex 2015.5.20)  18 APR 2016 02:26
+This is pdfTeX, Version 3.1415926-2.5-1.40.14 (TeX Live 2013/Debian) (format=pdflatex 2015.5.20)  18 APR 2016 12:55
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -463,6 +463,10 @@ G,.JBIG2,.JB2,.eps]
 File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Liv
 e
 ))
+Underfull \hbox (badness 3701) in paragraph at lines 31--32
+[]\OT1/ptm/b/n/9 Currently, there are mul-ti-ple sys-tems that im-ple-ment
+ []
+
 (./introduction.tex
 LaTeX Font Info:    External font `cmex10' loaded for size
 (Font)              <7> on input line 12.
@@ -473,11 +477,11 @@ LaTeX Font Info:    External font `cmex10' loaded for size
 
 ]
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <8> on input line 20.
+(Font)              <8> on input line 21.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <6> on input line 20.
+(Font)              <6> on input line 21.
 
-Underfull \hbox (badness 1783) in paragraph at lines 44--45
+Underfull \hbox (badness 1783) in paragraph at lines 47--48
 []\OT1/ptm/m/n/10 Capability-based sys-tems are typ-i-cally based, at least
  []
 
@@ -487,13 +491,14 @@ Missing character: There is no ú in font ptmr7t!
 Missing character: There is no ‚ in font ptmr7t!
 Missing character: There is no Ä in font ptmr7t!
 Missing character: There is no ù in font ptmr7t!
+[2]
 Missing character: There is no ‚ in font ptmr7t!
 Missing character: There is no Ä in font ptmr7t!
 Missing character: There is no ú in font ptmr7t!
 Missing character: There is no ‚ in font ptmr7t!
 Missing character: There is no Ä in font ptmr7t!
 Missing character: There is no ù in font ptmr7t!
-[2]) (./L4.tex) (./Barrelfish.tex [3]
+) (./L4.tex [3]) (./Barrelfish.tex
 <img/BF_sharing_res.png, id=20, 803.0pt x 602.25pt>
 File: img/BF_sharing_res.png Graphic file (type png)
 
@@ -504,30 +509,58 @@ Package pdftex.def Info: img/BF_sharing_res.png used on input line 19.
 
 LaTeX Warning: Citation `miltchev2008' on page 5 undefined on input line 4.
 
-[5]
-
-LaTeX Warning: Citation `tahoelafs' on page 6 undefined on input line 51.
-
-[6]) (./capsicum.tex <img/capcisum_sandbox.png, id=33, 658.46pt x 269.005pt>
-File: img/capcisum_sandbox.png Graphic file (type png)
-
-<use img/capcisum_sandbox.png>
-Package pdftex.def Info: img/capcisum_sandbox.png used on input line 13.
-(pdftex.def)             Requested size: 296.30426pt x 121.05112pt.
-
-Overfull \hbox (44.30426pt too wide) in paragraph at lines 13--14
- [][] 
- []
+<img/orange.png, id=27, 1079.03125pt x 686.565pt>
+File: img/orange.png Graphic file (type png)
+ <use img/orange.png>
+Package pdftex.def Info: img/orange.png used on input line 30.
+(pdftex.def)             Requested size: 215.80243pt x 137.31056pt.
 
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
-) (./capbacsystem.tex
+[5]
 
-LaTeX Warning: Citation `capbac' on page 7 undefined on input line 5.
+LaTeX Warning: Citation `tahoelafs' on page 6 undefined on input line 51.
 
-[7 <./img/capcisum_sandbox.png>]) (./implementation.tex) (./conclusion.tex)
-(./main.bbl)
+<img/immutable.png, id=31, 626.34pt x 462.72874pt>
+File: img/immutable.png Graphic file (type png)
+ <use img/immutable.png>
+Package pdftex.def Info: img/immutable.png used on input line 57.
+(pdftex.def)             Requested size: 125.26578pt x 92.5441pt.
+
+<img/mutable.png, id=32, 665.48625pt x 610.28pt>
+File: img/mutable.png Graphic file (type png)
+ <use img/mutable.png>
+Package pdftex.def Info: img/mutable.png used on input line 73.
+(pdftex.def)             Requested size: 133.09488pt x 122.05383pt.
+
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+[6 <./img/orange.png> <./img/immutable.png>]) (./capsicum.tex
+Underfull \hbox (badness 2922) in paragraph at lines 5--6
+\OT1/ptm/m/n/10 pa-bil-ity based ac-cess con-trol sys-tem de-vel-oped at the
+ []
+
+<img/capcisum_sandbox.png, id=36, 658.46pt x 269.005pt>
+File: img/capcisum_sandbox.png Graphic file (type png)
+
+<use img/capcisum_sandbox.png>
+Package pdftex.def Info: img/capcisum_sandbox.png used on input line 13.
+(pdftex.def)             Requested size: 256.79837pt x 104.91151pt.
+
+Overfull \hbox (4.79837pt too wide) in paragraph at lines 13--14
+ [][] 
+ []
+
+[7 <./img/mutable.png>]) (./capbacsystem.tex [8 <./img/capcisum_sandbox.png>]
+<img/capBac.png, id=45, 1157.32375pt x 657.45625pt>
+File: img/capBac.png Graphic file (type png)
+ <use img/capBac.png>
+Package pdftex.def Info: img/capBac.png used on input line 21.
+(pdftex.def)             Requested size: 231.46065pt x 131.48892pt.
+)
+(./implementation.tex) (./conclusion.tex) (./main.bbl [9 <./img/capBac.png>])
 
 ** Conference Paper **
 Before submitting the final camera ready copy, remember to:
@@ -539,29 +572,32 @@ Before submitting the final camera ready copy, remember to:
  uses only Type 1 fonts and that every step in the generation
  process uses the appropriate paper size.
 
-[8] (./main.aux)
+[10
+
+] (./main.aux)
 
 LaTeX Warning: There were undefined references.
 
  ) 
 Here is how much of TeX's memory you used:
- 10629 strings out of 493304
- 202808 string characters out of 6139871
- 257075 words of memory out of 5000000
- 13862 multiletter control sequences out of 15000+600000
- 41460 words of font info for 75 fonts, out of 8000000 for 9000
+ 10654 strings out of 493304
+ 203235 string characters out of 6139871
+ 256093 words of memory out of 5000000
+ 13882 multiletter control sequences out of 15000+600000
+ 43045 words of font info for 77 fonts, out of 8000000 for 9000
  957 hyphenation exceptions out of 8191
- 56i,8n,55p,1407b,242s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 56i,8n,55p,1407b,257s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/share/texliv
 e/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texlive/texm
-f-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/share/texlive/texmf-dist/
-fonts/type1/urw/times/utmb8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw
-/times/utmbi8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmr8a.
-pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on main.pdf (8 pages, 157359 bytes).
+f-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/texmf-dist
+/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/share/texlive/texmf-dist/fonts/
+type1/urw/times/utmb8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times
+/utmbi8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></
+usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
+Output written on main.pdf (10 pages, 698736 bytes).
 PDF statistics:
- 64 PDF objects out of 1000 (max. 8388607)
- 43 compressed objects within 1 object stream
+ 78 PDF objects out of 1000 (max. 8388607)
+ 50 compressed objects within 1 object stream
  0 named destinations out of 1000 (max. 500000)
- 23 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 43 words of extra memory for PDF output out of 10000 (max. 10000000)
 
