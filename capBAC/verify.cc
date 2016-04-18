@@ -423,6 +423,11 @@ int listen_block2(int soc, EC_KEY* authority_keys[]){
   unsigned char response;
   struct sockaddr_in retAddress;
 
+  struct sigaction action;
+  memset(&action, 0, sizeof(struct sigaction));
+  action.sa_handler = term;
+  sigaction(SIGTERM, &action, NULL);
+
 #ifdef DEBUG
   fprintf(logfile, "DEBUG: entering network loop\n");
 #endif
