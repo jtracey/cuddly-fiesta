@@ -27,7 +27,7 @@ until [ $PORT -ge $MAX_PORT ]; do
 done
 
 # start 1 authority
-./auth 49151 1 2>&1 logs/auth_log &
+./auth 1 49151 >&1 logs/auth_log &
 APID=$!
 
 # start m clients
