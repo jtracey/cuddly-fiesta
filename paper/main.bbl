@@ -6,6 +6,13 @@ K.~Elphinstone and G.~Heiser.
 \newblock In {\em Proceedings of the Twenty-Fourth ACM Symposium on Operating
   Systems Principles}, pages 133--150. ACM, 2013.
 
+\bibitem{hernandez2013distributed}
+J.~L. Hern{\'a}ndez-Ramos, A.~J. Jara, L.~Mar{\i}n, and A.~F. Skarmeta.
+\newblock Distributed capability-based access control for the internet of
+  things.
+\newblock {\em Journal of Internet Services and Information Security (JISIS)},
+  3(3/4):1--16, 2013.
+
 \bibitem{kuz2010}
 I.~Kuz, G.~Klein, C.~Lewis, and A.~Walker.
 \newblock capdl: A language for describing capability-based systems.
@@ -44,5 +51,10 @@ T.~Sewell, S.~Winwood, P.~Gammie, T.~Murray, J.~Andronick, and G.~Klein.
   ITP 2011, Berg en Dal, The Netherlands, August 22-25, 2011. Proceedings},
   chapter seL4 Enforces Integrity, pages 325--340.
 \newblock Springer Berlin Heidelberg, Berlin, Heidelberg, 2011.
+
+\bibitem{watson2010capsicum}
+R.~N. Watson, J.~Anderson, B.~Laurie, and K.~Kennaway.
+\newblock Capsicum: Practical capabilities for unix.
+\newblock In {\em USENIX Security Symposium}, volume~46, page~2, 2010.
 
 \end{thebibliography}

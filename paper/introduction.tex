@@ -4,19 +4,20 @@ Capabilities are a compelling means of access control in digital systems. As suc
 
 In order to decide how an access control system should be implemented, it would stand to reason that one must first have an understanding not only of the mechanisms that system would provide, but also the advantages and disadvantages of particular design decisions compared to other systems. Towards that end, we seek to examine the differences between various options of capability-based access control systems, both in practice, and in high-level design. To do so, we present in this paper an examination of some deployed capability systems, as well as a means of providing comparative performance results from a customizable workload.
 
-In this section, we provide some background on access control, so as to provide a better understanding of the purpose and background of capability systems. Then, we give more detail on what capabilities specifically are, and what advantages they bring. In Section II, we give some specific examples and details on how capabilities have been used in kernels. Then, in Section III, we give examples of capabilities that are implemented in the user space level of systems. We then give a description of our experimentation on capability structures, followed by some concluding remarks.
+In this section, we provide some background on access control, so as to provide a better understanding of the purpose and background of capability systems. Then, we give more detail on what capabilities specifically are, and what advantages they bring. In Section II, we give some specific examples and details on how capabilities have been used in kernels. Then, in Section III and IV, we give examples of capabilities that are implemented in file systems and in user space level of systems, respectively. We then give a description of our experimentation and results on capability structures in Section V and VI, followed by some concluding remarks in Section VII.
 
 \subsection{Access Control}
 Sufficiently complicated systems must have some means of keeping track of resources. Who has access to what resource and under what conditions is a non-trivial problem that exists in a myriad of contexts, from management of physical locations to management of intelligence. Management of these resources, to some extent, can be used to analogously manage computer systems, but were generally insufficiently formalized to create the guarantees desired for systems like operating systems. To address this, precise models known as {\em access control systems} were created.
 
 While details may vary, access control is primarily concerned with the interaction between two or three types of entities: an {\em object} (or {\em resource}), a {\em subject} (or {\em client}), and optionally, an {\em authority}. The object is the particular resource for which access is being determined by the access control system. Examples include a particular file in a file system, output from a sensor, and an address range in memory. The subject is the entity that is being granted or denied access. This may be anything from a human user, to a particular process or thread, or a physical device. The authority is the entity which is granting (or denying) the subject the ability to access the object. In practice, there typically exists some authority, such as the kernel or a user space program that manages the access control. However, strictly speaking, no authority is necessary, and often (particularly in theoretical constructions), any action an authority may implicitly be able to perform is instead represented as an object that another subject has access to (e.g. there may be a ``grant access to object $o$'' object).
 
-The relationship between these entities may be represented as an {\em access matrix}.\cite{lampson1971} In such a representation, the rows correspond to subjects, while the columns correspond to objects. No authority is explicitly represented in the matrix, but it would be responsible for populating or enforcing the rules of the matrix. Within each cell of the matrix are the actions a the respective subject may take on the respective object. (The original paper describes these cells as ``capabilities,'' though this is not exactly how terminology used today.) An example of such a matrix may be found in table~\ref{acmatrix}. In it, the user Carol has read and execute permissions on File 2, and no permissions on File 3. 
+The relationship between these entities may be represented as an {\em access matrix}.\cite{lampson1971} In such a representation, the rows correspond to subjects, while the columns correspond to objects. No authority is explicitly represented in the matrix, but it would be responsible for populating or enforcing the rules of the matrix. Within each cell of the matrix are the actions that the respective subject may take on the respective object. (The original paper describes these cells as ``capabilities,'' though this is not exactly how terminology used today.) An example of such a matrix may be found in table~\ref{acmatrix}. In it, the user Carol has read and execute permissions on File 2, and no permissions on File 3. 
 
-Because of the sparsity of the matrix, it is generally wasteful to store it in its entirety as a table. Instead, the matrix is typically stored as the columns of the table (e.g. in table~\ref{acmatrix}, there would exist an entry for File 1, which would store the fact that Alice has read and write permissions, and Carp; has read permissions), which is known as an {\em Access Control List} (or ACL), or as the rows of the matrix (e.g. there exists an entry for Carol, which would store the fact that she has read permissions on File 1, and read and execute permissions on File 2), which is known as a capability-based system.
+Because of the sparsity of the matrix, it is generally wasteful to store it in its entirety as a table. Instead, the matrix is typically stored as the columns of the table (e.g. in table~\ref{acmatrix}, there would exist an entry for File 1, which would store the fact that Alice has read and write permissions, and Carol; has read permissions), which is known as an {\em Access Control List} (or ACL), or as the rows of the matrix (e.g. there exists an entry for Carol, which would store the fact that she has read permissions on File 1, and read and execute permissions on File 2), which is known as a capability-based system.
 
 \begin{table}[t]
-  \centering
+ \centering
+ 
   \begin{tabular}{|l||c|c|c|}
     \hline
     &File 1&File 2&File 3\\
@@ -28,9 +29,11 @@ Because of the sparsity of the matrix, it is generally wasteful to store it in i
     \hline
     Carol&r&rx&\\
     \hline
-  \end{tabular}
-  \caption{An example access control table.}
+  \end{tabular}\\
+  \bigskip
+  \caption{An example access control table}
   \label{acmatrix}
+  
 \end{table}
 
 \subsection{Capability-Based Access Control}
