@@ -47,4 +47,4 @@ until [ $PORT -ge $MAX_PORT ]; do
     kill ${VPIDS[$PORT]}
     let PORT=$PORT+1
 done
-kill APID
+kill $APID
