@@ -198,7 +198,7 @@ int get_request(int fd, int choice, const char* port_mode1, const char* port_mod
 	        if(write(fd, buffer.GetString(), buffer.GetSize()+1) < 0) {
 		        printf("Failed to write to socket\n");
           	}
-	        return 1;
+	       // return 1;
 	}
   
  
@@ -265,7 +265,7 @@ int get_request(int fd, int choice, const char* port_mode1, const char* port_mod
 
 	        }
 	
-	        return 1;
+	    //    return 1;
 	}// end of mode 2
 
 }
