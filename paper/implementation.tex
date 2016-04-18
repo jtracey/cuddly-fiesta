@@ -1,3 +1,18 @@
-\section{implementation and results}
+\section{Implementation}
 \label{sec:implementation}
-<k,j,s>
+
+The fundamental problem is the lack of comparisons between the different mechanisms for capability based access control mechanisms, since most systems are designed to address the requirements of a target application. For this we recognized the lack of and therein need for a standard workload to evaluate the performance of these systems against, a form of a benchmark workload. While it would not be ideal for us to design the gold benchmark for this purpose, we created a workload generation mechanism by using our own workload language, so that we can generate workloads customizable to our requirements.
+
+The language is composed of the following 6 instructions :
+\begin{itemize}
+\item createc $\langle$client name$\rangle$ $\langle$list of resources$\rangle$
+\item creater $\langle$resource name$\rangle$
+\item access $\langle$client name$\rangle$ $\langle$resource name$\rangle$
+\item removec $\langle$client name$\rangle$
+\item remover $\langle$resource name$\rangle$
+\item revoke $\langle$client name$\rangle$ $\langle$list of resources$\rangle$
+\end{itemize}   
+Although we did limit revocation to a time out mechanism and hence did not make use of that instruction
+
+\section{Results}
+\label{sec:results}
