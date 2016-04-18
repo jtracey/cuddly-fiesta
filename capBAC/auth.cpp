@@ -110,8 +110,75 @@ int sign(Document* d)
 	return 0;
 }
 
+//////////////////////////////////////////////////////////////////////////////////////
 
-int get_request(int fd, int choice, const char* port_mode1, const char* port_mode2) {
+char* get_request(int fd) {
+  char* message;
+  size_t size = TOKENSIZE;
+  int offset;
+
+  message = (char*) realloc(NULL, sizeof(char)*size);
+  if(!message) {
+    printf("get_request: Failure to realloc\n");
+    exit(1);
+  }
+
+  offset = -1;
+  do {
+    offset++;
+    if (offset == size) {
+      message = (char*) realloc(message, sizeof(char)*(size += 16)); //??
+      if(!message) {
+	printf("get_request: Failure to realloc\n");
+	exit(1);
+      }
+    }
+    if(read(fd, message+offset, 1) <= 0) {
+      printf("get_request: EOF encountered\n");
+
+      char c = message[offset];
+      message[offset] = 0;
+      printf("story so far (%d): %s%c\n", offset, message, c);
+
+      exit(1);
+    }
+  } while (message[offset] != 0);
+
+
+  printf("get_request: message at %p: %s\n", message, message);
+
+  return message;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////
+
+/*int process_mode(int fd, int choice, const char* port_mode1, const char* port_mode2) {
+
+        int fd;
+        socklen_t peer_addr_size = sizeof(struct sockaddr_in);
+        char * sub_request;
+        unsigned char response;
+        struct sockaddr_in retAddress;
+        
+        printf("DEBUG: entering network loop\n");
+        while(true) {
+        
+            printf("DEBUG: network loop: accepting connection...\n");
+            fd = accept(soc, (struct sockaddr *) &retAddress, &peer_addr_size);
+            if( fd == -1) {
+              printf("listen: Failed to accept: %s\n", strerror(errno));
+              exit(1);
+            }
+            printf( "DEBUG: network loop: connection accepted, getting request from subject...\n");
+        
+            sub_request = get_request(fd);
+        
+        }
+        
+
+
+
+
 
 	char* message;
 	size_t size = TOKENSIZE;
@@ -122,7 +189,7 @@ int get_request(int fd, int choice, const char* port_mode1, const char* port_mod
   
 	message = (char*) realloc(NULL, sizeof(char)*size);
 	if(!message) {
-		printf("get_request: Failure to realloc\n");
+		printf("process_mode: Failure to realloc\n");
 		exit(1);
   	}
 
@@ -132,13 +199,13 @@ int get_request(int fd, int choice, const char* port_mode1, const char* port_mod
 		if (offset == size) {
 			message = (char*) realloc(message, sizeof(char)*(size += 16)); 
 			if(!message) {
-		        	printf("get_request: Failure to realloc\n");
+		        	printf("process_mode: Failure to realloc\n");
 		        	exit(1);
       			}	
     		}
 
 		if(read(fd, message+offset, 1) <= 0) {
-			printf("get_request: EOF encountered\n");
+			printf("process_mode: EOF encountered\n");
 
 			char c = message[offset];
 			message[offset] = '\0';
@@ -150,7 +217,7 @@ int get_request(int fd, int choice, const char* port_mode1, const char* port_mod
 	} while (message[offset-1] != '\0');
 
 
-	printf("DEBUG: get_request: message at %p: %s\n", message, message);
+	printf("DEBUG: process_mode: message at %p: %s\n", message, message);
 
 	// step 2: create token 'd', common for both mode1 and mode2 
   
@@ -199,6 +266,7 @@ int get_request(int fd, int choice, const char* port_mode1, const char* port_mod
 		        printf("Failed to write to socket\n");
           	}
 	       // return 1;
+	       
 	}
   
  
@@ -268,7 +336,7 @@ int get_request(int fd, int choice, const char* port_mode1, const char* port_mod
 	    //    return 1;
 	}// end of mode 2
 
-}
+}*/
 
 int bootstrap_network(const char* port_sub){
 
@@ -300,11 +368,12 @@ int bootstrap_network(const char* port_sub){
 	return soc;
 }
 
-int listen_block(int soc){
+int listen_block(int soc,int choice, const char* port_mode1, const char* port_mode2){
 
 	int fd;
 	socklen_t peer_addr_size = sizeof(struct sockaddr_in);
 	struct sockaddr_in retAddress;
+    char * sub_request;
 
 	printf("DEBUG: entering network loop\n");
 	
@@ -319,9 +388,128 @@ int listen_block(int soc){
 		
 		printf( "DEBUG: network loop: connection accepted, getting request from subject...\n");
     
-		return fd;
+		sub_request = get_request(fd);
 
   	}
+  	
+      	string message = sub_request;
+      	vector<string> sep = split(message, '\n');
+	    const char * pub_key = sep[0].c_str();
+	    const char * res_add = sep[1].c_str();
+
+	    cout << "public key (b64): " << pub_key << "\n";
+	    cout << "resource address: " << res_add << "\n";
+	
+	
+	/////////////////////**********************************************
+	    Document d;
+	    Value ii, nb, na, suv, dev;
+	    unsigned int now;
+
+	    d.Parse("{}");
+
+	    now = time(NULL);
+	    ii.SetInt(now);
+	    nb.SetInt(now);
+	    na.SetInt(1600000000);
+	    suv.SetString(pub_key, strlen(pub_key), d.GetAllocator());
+	    dev.SetString(res_add, strlen(res_add), d.GetAllocator());
+
+	    d.AddMember("id", "fake identifier", d.GetAllocator());
+	    d.AddMember("ii", ii, d.GetAllocator());
+	    d.AddMember("is", "fake issuer", d.GetAllocator());
+	    d.AddMember("su", suv, d.GetAllocator());
+	    d.AddMember("de", dev, d.GetAllocator());
+	    d.AddMember("ar", "fake access rights", d.GetAllocator());
+	    d.AddMember("nb", nb, d.GetAllocator());
+	    d.AddMember("na", na, d.GetAllocator());
+
+	    sign(&d);
+
+	    // Step 3: Mode choice dependent
+	    // (Mode 1, return token to client)
+	    if (choice == 1) {
+		        StringBuffer buffer;
+		        Writer<StringBuffer> writer(buffer);
+	            d.Accept(writer);
+
+                cout << "buffer data : " << buffer.GetString();
+		        cout << "\n buffer len:" << buffer.GetSize();
+
+	            if(write(fd, buffer.GetString(), buffer.GetSize()+1) < 0) {
+		                printf("Failed to write to socket\n");
+                }
+                   // return 1;
+         }
+      
+     
+	    // (Mode 2, return token to resource, token ID to client)
+
+	    else if(choice == 2 ){
+      
+            	cout << "Mode 2\n";
+             
+	            int soc2;
+            	uint16_t port = strtol(port_mode2, NULL, 10);
+	            char null_string[17];
+              
+            	soc2 = socket(AF_INET, SOCK_STREAM, 0);
+	            if(soc2 < 0) {
+            		printf("failed to create socket: %s\n", strerror(errno));
+              	}
+
+	     	    struct sockaddr_in connectAddress;
+	            memset(&connectAddress, 0, sizeof(connectAddress));
+            	connectAddress.sin_family = AF_INET;
+	            connectAddress.sin_addr.s_addr = MACHINE_IP;
+              	connectAddress.sin_port = htons(port);
+               
+	            if(connect(soc2, (struct sockaddr *) &connectAddress, sizeof(connectAddress)) < 0) {
+                		printf("send token to resource: failed to connect to resource: %s\n", strerror(errno));
+              	}
+
+
+		    // insert code for null string here
+            	int i;
+            
+		    // add 17 NULLS before sending the json to resource -- one socket
+		            for (i = 0; i <=17; i++){
+	            	null_string[i] = (char) 0;
+	            } 
+	              
+	            if(write(soc2, null_string, 17) < 0) {
+	            	printf("Failed to write null string to resource socket\n");
+	            }
+	
+	            //send token to resource here
+	            StringBuffer buffer;
+	            Writer<StringBuffer> writer(buffer);
+	            d.Accept(writer);
+	
+	            cout << "buffer data : "<< buffer.GetString() ;
+	            cout << "\n buffer len:" << buffer.GetSize() << "\n";
+	
+	            if(write(soc2, buffer.GetString(), buffer.GetSize()+1) < 0) {
+	            	printf("Failed to write to token to resource socket\n");        
+	            }
+	              
+	            //send token ID to client
+	            
+                int tokenID = d["ii"].GetInt();
+      	        std::string s_ID = std::to_string(tokenID);
+                char const *tokenID_str = s_ID.c_str();
+                
+                cout << "string token ID: " << tokenID_str << "\n";
+                
+	            if(write(fd, tokenID_str, strlen(tokenID_str)+1) < 0) {
+	            	printf("Failed to write to socket\n");
+
+	            }
+	
+	        //    return 1;
+	    }// end of mode 2
+	/////////////////////**********************************************
+
 }
 
 int main(int argc, char *argv[]){
@@ -334,15 +522,15 @@ int main(int argc, char *argv[]){
   
 	int fd1, soc1;
   	soc1 = bootstrap_network(argv[2]);
-	fd1 = listen_block(soc1);
+	//fd1 = listen_block(soc1);
 	const char* port_client = argv[2];
 	const char* port_resource = argv[3];
 
   	if(!strcmp(argv[1], "1"))
-		get_request(fd1,1,port_client,port_resource);
+		listen_block(soc1,1,port_client,port_resource);
   
     	else if(!strcmp(argv[1], "2")){
-		get_request(fd1,2,port_client,port_resource);
+		listen_block(soc1,2,port_client,port_resource);
 		
 	}  		
     
