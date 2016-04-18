@@ -3,7 +3,7 @@
 \usepackage{graphicx}
 
 \begin{document}
-\title{Qualitative and Quantitative Qualities \\ of Contemporary Capability Constructions}
+\title{{Capability-Based Access Control Mechanisms:} \\ \centerline{\Large{A Survey and Implementation of Current Systems}}}
 
 \author{
   \IEEEauthorblockN{Kritika Iyer}
@@ -17,6 +17,8 @@
   \IEEEauthorblockN{Justin Tracey}
   \IEEEauthorblockA{Cheriton School of Computer Science\\
     j3tracey@uwaterloo.ca}
+    
+
 }
 
 \date{}
@@ -24,7 +26,9 @@
 
 \maketitle
 \begin{abstract}
-Abstract text. Abstract text. Abstract text. Abstract text. Abstract text. Abstract text. Abstract text. Abstract text.
+Access control lists (ACL) are struggling to maintain the performance in systems, as the requirement for scalability in these systems increases. ACLs lead to higher overheads which in turn leads to inefficiency as the number of clients in the system increases. A distinct approach to address access control of resources is by using \textit{capabilities}. Capabilities are used to monitor access control on a per-client level, rather than on a per-resource level. As systems are becoming more distributed, capability based access control is appearing to be a closer fit to such systems, in comparison to ACLs.
+
+Currently, there are multiple systems that implement capability-based resource management, both on user space and kernel space. But there are no established results that show that existing systems remain secure in the newly emerging paradigms. Most systems that are introduced in the latest research mostly have hypothetical constructions, but very few have actual implementations built. Those few which are implemented rarely have performance evaluations. These are two problems which need to be addressed. In this paper we first look at conducting a detailed qualitative analysis of current implementations of various systems that perform capability-based access control. We then look an an individual design and look to perform a quantitative analysis of its performance. With these results we hope to provide a means to identify promising avenues of research in the future. 
 \end{abstract}
 
 \input{introduction}	
