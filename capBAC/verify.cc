@@ -382,7 +382,8 @@ int listen_block1(int soc, EC_KEY* authority_keys[]){
     fd = accept(soc, (struct sockaddr *) &retAddress, &peer_addr_size);
     if( fd == -1) {
       fprintf(logfile, "listen: Failed to accept: %s\n", strerror(errno));
-      exit(1);
+       close(fd);
+	exit(1);
     }
 
     // TODO: do something smart when these fail
