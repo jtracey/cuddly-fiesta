@@ -228,10 +228,11 @@ int get_request(int fd, int choice, const char* port_mode) {
 
 	        else if(choice == 2 ){
           
+		const char *res_port = sep[2].c_str();
                 cout << "Mode 2\n";
-
+		cout << "resource PORT:" << res_port << endl;
                 int soc2;
-                uint16_t port = strtol(port_mode, NULL, 10);
+                uint16_t port = strtol(res_port, NULL, 10);
                 char null_string[17];
 
                 soc2 = socket(AF_INET, SOCK_STREAM, 0);
