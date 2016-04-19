@@ -17,6 +17,8 @@
 #include "rapidjson/prettywriter.h"
 #include "base64.h"
 
+
+
 using namespace std;
 using namespace rapidjson;
 
@@ -117,6 +119,7 @@ int get_request(int fd, int choice, const char* port_mode) {
           char* message;
           size_t size = TOKENSIZE;
           int offset;
+         
 
           // step 1: read request from client, common for both mode1 and mode2
          
@@ -159,8 +162,8 @@ int get_request(int fd, int choice, const char* port_mode) {
 
             // step 2: create token 'd', common for both mode1 and mode2 
 	        Document d;
-	        Value ii, nb, na, suv, dev;
-	        unsigned int now;
+	        Value ii, nb, na, suv, dev,id;
+            unsigned int now;
 
 	        d.Parse("{}");
 
@@ -168,10 +171,27 @@ int get_request(int fd, int choice, const char* port_mode) {
 	        ii.SetInt(now);
 	        nb.SetInt(now);
 	        na.SetInt(1600000000);
+
+            //random 16 byte ID 
+          /*  char id_buffer[17];
+            int j;
+            srand(time(NULL));
+            for (j = 0; j < sizeof(id_buffer); j++) {
+                id_buffer[j] = rand() %10 ;
+            }
+             id_buffer[16] = '\0';
+            
+            //cout << " id_buffer" <<  id_buffer;
+            
+            
+            char const * id_buf2 = (char const *)id_buffer;
+            
+            id.SetString(id_buffer, strlen(id_buffer), d.GetAllocator());*/
+
 	        suv.SetString(pub_key, strlen(pub_key), d.GetAllocator());
 	        dev.SetString(res_add, strlen(res_add), d.GetAllocator());
 
-	        d.AddMember("id", "fake identifier", d.GetAllocator());
+	        d.AddMember("id", "1234567891234567", d.GetAllocator());
 	        d.AddMember("ii", ii, d.GetAllocator());
 	        d.AddMember("is", "fake issuer", d.GetAllocator());
 	        d.AddMember("su", suv, d.GetAllocator());
@@ -251,13 +271,13 @@ int get_request(int fd, int choice, const char* port_mode) {
 
                 //send token ID to client
 
-                int tokenID = d["ii"].GetInt();
-                std::string s_ID = std::to_string(tokenID);
-                char const *tokenID_str = s_ID.c_str();
+           
 
+                char const *tokenID_str = d["id"].GetString();
                 cout << "string token ID: " << tokenID_str << "\n";
 
                 if(write(fd, tokenID_str, strlen(tokenID_str)+1) < 0) {
+             
                      printf("Failed to write to socket\n");
                 }
 
