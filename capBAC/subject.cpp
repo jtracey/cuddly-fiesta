@@ -400,6 +400,8 @@ int mode2_get_token_identifier(const char *resource_name, EC_KEY **ec_key, char 
       snprintf(message, B64SIZE, "%s", pub_key_b64);
       strcat(message, "\n");
       strcat(message,resource_name);
+      strcat(message, "\n");
+      strcat(message, std::to_string(port_verifier).c_str());
       printf("MESSAGE: \n%s\n",message);
 
 
