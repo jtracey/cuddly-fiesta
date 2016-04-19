@@ -174,17 +174,17 @@ int get_request(int fd, int choice, const char* port_mode) {
 	        na.SetInt(1600000000);
 
             //random 16 byte ID 
-            char id_buffer[17];
+            char id_buffer[17] ;
             int j;
             srand(time(NULL));
-            for (j = 0; j < sizeof(id_buffer); j++) {
+            for (j = 0; j < 16; j++) {
 //                itoa(rand()%10, id_buffer+j,10);
 //                  snprintf(id_buffer+j, 1, "%d", rand()%10);
 
-                   id_buffer[j] = 'A' + rand()%24;
+                   id_buffer[j] = 'A' + random()%24;
 
             }
-             id_buffer[16] = '\0';
+             id_buffer[j] = '\0';
             
             cout << " id_buffer" <<  id_buffer << "\n";
             
