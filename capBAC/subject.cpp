@@ -487,7 +487,6 @@ void parse(string buffer, EC_KEY **ec_key)
 	port_verifier = atoi(client_name.c_str());
 	string resource_name = *(++token_iterator);
 	printf("PORT : %d\n", port_verifier);
-	read_keypair("FIX_KEY", ec_key);
 	if(run_mode == 1)
 	  mode1_access_resource(resource_name.c_str(), ec_key);
 	else if(run_mode == 2)
