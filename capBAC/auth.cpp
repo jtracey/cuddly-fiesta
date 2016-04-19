@@ -1,8 +1,9 @@
+#include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include <stdio.h>
 #include <sstream>
 #include <arpa/inet.h>
 #include <unistd.h>
@@ -173,25 +174,29 @@ int get_request(int fd, int choice, const char* port_mode) {
 	        na.SetInt(1600000000);
 
             //random 16 byte ID 
-          /*  char id_buffer[17];
+            char id_buffer[17];
             int j;
             srand(time(NULL));
             for (j = 0; j < sizeof(id_buffer); j++) {
-                id_buffer[j] = rand() %10 ;
+//                itoa(rand()%10, id_buffer+j,10);
+//                  snprintf(id_buffer+j, 1, "%d", rand()%10);
+
+                   id_buffer[j] = 'A' + rand()%24;
+
             }
              id_buffer[16] = '\0';
             
-            //cout << " id_buffer" <<  id_buffer;
+            cout << " id_buffer" <<  id_buffer << "\n";
             
             
             char const * id_buf2 = (char const *)id_buffer;
             
-            id.SetString(id_buffer, strlen(id_buffer), d.GetAllocator());*/
+            id.SetString(id_buffer, strlen(id_buffer), d.GetAllocator());
 
 	        suv.SetString(pub_key, strlen(pub_key), d.GetAllocator());
 	        dev.SetString(res_add, strlen(res_add), d.GetAllocator());
 
-	        d.AddMember("id", "1234567891234567", d.GetAllocator());
+	        d.AddMember("id", id, d.GetAllocator());
 	        d.AddMember("ii", ii, d.GetAllocator());
 	        d.AddMember("is", "fake issuer", d.GetAllocator());
 	        d.AddMember("su", suv, d.GetAllocator());
