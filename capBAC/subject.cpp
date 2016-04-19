@@ -105,6 +105,7 @@ int get_token(const char *resource_name, EC_KEY **ec_key, char **json_message)
   soc = socket(AF_INET, SOCK_STREAM, 0);
   if (soc == -1)	{
     printf("Socket Failed\n");
+    close(soc);  
     return 1;
   }
 
@@ -185,7 +186,7 @@ int send_token(unsigned char **sig, unsigned int *sig_len, char **json_message, 
 
 
   close(soc);
-  printf("RESPONSE : %d\n",response);
+  cout << "RESPONSE : "<<response <<endl;
   return 0;
 
 }
@@ -344,14 +345,14 @@ int mode2_send_token_identifier(char **token_identifier)
   }
 
   printf("SEND_TOKEN_IDENTIFIER: %s\n", *token_identifier);
-  if(write(soc, token_identifier, TOKEN_IDENTIFIER_SIZE) < 0) {
+  if(write(soc, *token_identifier, TOKEN_IDENTIFIER_SIZE) < 0) {
     printf("Failed to write to socket\n");
   }
 
   if(read(soc, &response, 1) < 0) {
     printf("Failed to read RESPONSE_LENGTH from socket\n");
   }
-  printf("RESPONSE : %c\n",response);
+  cout << "RESPONSE : " << response <<endl;
   return 0;
 
 }
@@ -409,8 +410,14 @@ int mode2_get_token_identifier(const char *resource_name, EC_KEY **ec_key, char 
      if(write(soc, message, strlen(message)+1) < 0) {
 	printf("Failed to write to socket\n");
       }
+ 
+     if(read(soc, *token_identifier, 17)<0) {
+	printf("Read from socket Failed\n");	
+      }
 
-      record r1 = make_pair(map_key, std::to_string(**token_identifier));
+      
+      cout<<"GOT_TOKEN_IDENTIFIER_FROM_ISSUER:"<< *token_identifier <<endl;
+      record r1 = make_pair(map_key, string(*token_identifier));
       map_table.insert(r1);
       close(soc);
    }
