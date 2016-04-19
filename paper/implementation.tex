@@ -49,7 +49,8 @@ With respect to our model, we tried to implement the capability types mentioned 
 	\end{enumerate}
 \end{enumerate}
 
-We implemented this design in C++ using RapidJSON \footnote{http://rapidjson.org/} for parsing and generating the capability tokens. In order to obtain secure connection between the issuer/ subject/ devices, we implemented the SSL protocol using the general purpose cryptography library \footnote{https://www.openssl.org/}. To simplify the workload used in our design, we consider the devices/ resources to be a plain text file. In the following section we discuss the results we obtained by running our capBAC system in Mode1 and Mode2. 
+We implemented this design in C++ using RapidJSON \footnote{http://rapidjson.org/} for parsing and generating the capability tokens. In order to obtain secure connection between the issuer/ subject/ devices, we used the openSSL toolkit \footnote{https://www.openssl.org/}. To simplify the workload used in our design, we consider the devices/ resources to be a plain text file. In the following section we discuss the results we obtained by running our capBAC system in Mode1 and Mode2. 
 
 \section{Results}
 \label{sec:results}
+
