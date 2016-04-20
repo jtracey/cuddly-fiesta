@@ -353,6 +353,7 @@ int mode2_send_token_identifier(char **token_identifier)
     printf("Failed to read RESPONSE_LENGTH from socket\n");
   }
   cout << "RESPONSE : " << response <<endl;
+  close(soc);
   return 0;
 
 }
