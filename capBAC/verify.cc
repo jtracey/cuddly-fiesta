@@ -24,6 +24,8 @@
 // change this to INADDR_ANY if using Shadow or VMs
 // although listen_nonblock needs to be finished first for Shadow
 #define MACHINE_IP inet_addr("127.0.0.1")
+// artificial network latency, in milliseconds
+#define LATENCY 0
 
 using namespace rapidjson;
 
@@ -399,6 +401,7 @@ int listen_block1(int soc, EC_KEY* authority_keys[]){
 #ifdef DEBUG
     fprintf(logfile, "DEBUG: sig recieved, readying process request: %p, %p\n", json, sig);
 #endif
+    usleep(LATENCY);
     response = process_request(json, sig, sig_len, authority_keys);
     if(response == 0) {
       fprintf(logfile, "request processed\n");
@@ -438,7 +441,7 @@ int listen_block2(int soc, EC_KEY* authority_keys[]){
 #endif
     fd = accept(soc, (struct sockaddr *) &retAddress, &peer_addr_size);
     if( fd == -1) {
-      fprintf(logfile, "listen: Failed to accept\n");
+      fprintf(logfile, "listen: Failed to accept: %s\n", strerror(errno));
       exit(1);
     }
 
@@ -462,6 +465,7 @@ int listen_block2(int soc, EC_KEY* authority_keys[]){
 #ifdef DEBUG
       fprintf(logfile, "DEBUG: network loop: json recieved, readying token store...\n");
 #endif
+      usleep(LATENCY);
       response = store_token(json, &capabilities, authority_keys);
       if(response == 0) {
 	fprintf(logfile, "capability stored\n");
@@ -475,6 +479,7 @@ int listen_block2(int soc, EC_KEY* authority_keys[]){
       }
     }
     else {
+      usleep(LATENCY);
       response = mode2_process(record, &capabilities);
       if(response == 0) {
 	fprintf(logfile, "request processed\n");
@@ -487,6 +492,7 @@ int listen_block2(int soc, EC_KEY* authority_keys[]){
 	exit(1);
       }
     }
+    close(fd);
   }
   return 0;
 }
