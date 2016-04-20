@@ -24,8 +24,10 @@
 // change this to INADDR_ANY if using Shadow or VMs
 // although listen_nonblock needs to be finished first for Shadow
 #define MACHINE_IP inet_addr("127.0.0.1")
-// artificial network latency, in milliseconds
+// artificial network latency, in MICROseconds
 #define LATENCY 0
+// artificial network bandwidth, in bytes/second
+#define BANDWIDTH 10000000
 
 using namespace rapidjson;
 
@@ -401,7 +403,8 @@ int listen_block1(int soc, EC_KEY* authority_keys[]){
 #ifdef DEBUG
     fprintf(logfile, "DEBUG: sig recieved, readying process request: %p, %p\n", json, sig);
 #endif
-    usleep(LATENCY);
+    long long int lag = ((strlen(json) + sig_len) * 1000000) / BANDWIDTH;
+    usleep(LATENCY + lag);
     response = process_request(json, sig, sig_len, authority_keys);
     if(response == 0) {
       fprintf(logfile, "request processed\n");
@@ -465,7 +468,8 @@ int listen_block2(int soc, EC_KEY* authority_keys[]){
 #ifdef DEBUG
       fprintf(logfile, "DEBUG: network loop: json recieved, readying token store...\n");
 #endif
-      usleep(LATENCY);
+      long long int lag = ((strlen(json)) * 1000000) / BANDWIDTH;
+      usleep(LATENCY + lag);
       response = store_token(json, &capabilities, authority_keys);
       if(response == 0) {
 	fprintf(logfile, "capability stored\n");
@@ -479,7 +483,8 @@ int listen_block2(int soc, EC_KEY* authority_keys[]){
       }
     }
     else {
-      usleep(LATENCY);
+      long long int lag = (17 * 1000000) / BANDWIDTH;
+      usleep(LATENCY + lag);
       response = mode2_process(record, &capabilities);
       if(response == 0) {
 	fprintf(logfile, "request processed\n");
