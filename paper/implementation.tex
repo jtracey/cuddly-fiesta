@@ -49,7 +49,95 @@ With respect to our model, we tried to implement the capability types mentioned 
 	\end{enumerate}
 \end{enumerate}
 
-We implemented this design in C++ using RapidJSON for parsing and generating the capability tokens.~\footnote{http://rapidjson.org/} In order to obtain secure connection between the issuer/subject/devices, we used the openSSL toolkit.~\footnote{https://www.openssl.org/} To simplify the workload used in our design, we consider the resources to be character strings. The implementation code can be found at \href{https://github.com/jtracey/cuddly-fiesta}{https://github.com/jtracey/cuddly-fiesta}. In the following section we discuss the results we obtained by running our capBAC system in Mode1 and Mode2.
+We implemented this design in C++ using RapidJSON for parsing and generating the capability tokens.~\footnote{http://rapidjson.org/} In order to obtain secure connection between the issuer/subject/devices, we used the openSSL toolkit.~\footnote{https://www.openssl.org/} To simplify the workload used in our design, we consider the resources to be character strings. The implementation code can be found at \href{https://github.com/jtracey/cuddly-fiesta}{https://github.com/jtracey/cuddly-fiesta}. In the following section we discuss the results we obtained by running our CapBAC-like system in Mode1 and Mode2.
 \section{Results}
 \label{sec:results}
 
+
+\begin{figure}[t]
+\begin{tikzpicture}
+  \begin{loglogaxis}[
+    %title={Bandwidth vs. Requests/Second},
+    xlabel={bandwidth (bytes/second)},
+    ylabel={requests/second},
+    xmin=1, xmax=10000000,
+    ymin=1, ymax=60000,
+    xtick={1,10,100,1000,10000,100000,1000000,10000000},
+    ytick={1,10,100,1000,10000},
+    legend pos=north west,
+    ymajorgrids=true,
+    grid style=dashed,
+    ]
+    
+    \addplot[
+    color=blue,
+    mark=square,
+    ]
+    coordinates {
+      (10,1)(100,3)(1000,30)(10000,260)(100000,2077)(1000000,3056)(10000000,3478)
+    };
+
+    \addplot[
+    color=green,
+    mark=square,
+    ]
+    coordinates {
+      (10,1)(100,42)(1000,783)(10000,3754)(100000,17317)(1000000,29143)(10000000,33169)
+    };
+    \legend{Mode 1,Mode 2}
+    
+  \end{loglogaxis}
+\end{tikzpicture}
+\caption{Bandwidth vs. performance}
+\label{fig:band}
+\end{figure}
+
+\begin{figure}[t]
+\begin{tikzpicture}
+  \begin{loglogaxis}[
+    %title={Latency vs. Requests/Second},
+    xlabel={latency (microseconds)},
+    ylabel={requests/second},
+    xmin=-100, xmax=200000,
+    ymin=1, ymax=60000,
+    xtick={1,10,100,1000,10000,100000,1000000,10000000},
+    ytick={1,10,100,1000,10000},
+    legend pos=north east,
+    ymajorgrids=true,
+    grid style=dashed,
+    ]
+    
+    \addplot[
+    color=blue,
+    mark=square,
+    ]
+    coordinates {
+      (1,3448)(1000,2806)(2500,2235)(5000,1465)(6000,1413)(10000,928)(30000,273)(60000,228)(100000,141)
+    };
+
+    \addplot[
+    color=green,
+    mark=square,
+    ]
+    coordinates {
+      (1,34121)(1000,7668)(2500,4470)(5000,2482)(6000,2089)(10000,1356)(20000,711)(30000,482)(60000,246)(100000,150)
+    };
+    \legend{Mode 1,Mode 2}
+    
+  \end{loglogaxis}
+\end{tikzpicture}
+\caption{Latency vs. performance}
+\label{fig:late}
+\end{figure}
+
+
+
+To simulate different layouts of the three constituent parties, we ran our system as three types of processes on the same machine (running a AMD Athlon(tm) II P340 Dual-Core Processor), with artificial delays added between the resource device and the other two entities. Delays were added in two forms: as a raw latency value, and as a ``bandwidth'' value that increased the delay according to the size of the data transferred. A workload consisting of three clients, three resource processes, and one authority was created, with each resource process providing access to one resource (though support for multiple resources per resource process is complete). The performance was measured as the number of processed resource requests over the course of 5 seconds. As can be seen in Fig.~\ref{fig:band} and \ref{fig:late}, the results clearly show that Mode 2 is superior to Mode 1 in the majority of network conditions. While the results are not fine-grained enough to determine what specifically are the causes, there two intuitive reasons for this to be the case.
+
+First, there is a considerable difference in the amount of cryptographic operations being done. In Mode 1, the integrity of the token received must be cryptographically verified each time a resource is accessed, as it contains the only available source of information to the resource device (aside from the public keys that are given out of band). In Mode 2, only when creating and destroying capabilities are cryptographic operations done (since accessing the resource is done via a random ``pointer,'' which functions as a password). Given that the creation and destruction of capabilities happens far less frequently than their being accessed, one source of these performance differences becomes clear.
+
+The second major reason why Mode 2 would be so much faster than Mode 1 is that Mode 2 requires less data to be transferred over the wire. Again, because there are far fewer capabilities created than there are invocations of capabilities, that Mode 1 requires sending the entire capability along with metadata for every access means that much more traffic is being generated than Mode 2, which only needs to send the entire capability to the resource once. This comes at the cost of an extra round trip to the device when a resource is created. And as can be seen in Fig.~\ref{fig:late}, the cost of this extra round trip causes the advantage of Mode 2 over Mode 1 to become less and less, though never quite surpassing it (though it is almost certainly the case that a more creation-heavy workload would have seen Mode 1 outperform Mode 2).
+
+In terms of memory usage, the maximum observed memory consumption of the device in Mode 1 was 5.9 MB, while the maximum observed memory of the device in Mode 2 was 2.2 MB. This difference is due to the extra overhead from storing additional cryptographic structures in Mode 1, and needing to store each capability as it is being processed for each request, even if the capability is the same as before. Again, in a workload that involves a larger number of capabilities (as compared to accesses) at one time, the results likely would have been much different.
+
+These results, while still preliminary, are much more extensive than any of the results that were detailed in the paper presenting CapBAC.~\cite{hernandez2013distributed} In our results, we have shown that an alternative design, where security is based on the secrecy of a particular value (a ``pointer'') instead of full cryptographic verification for every request, could have provided much better performance.
