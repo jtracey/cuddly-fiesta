@@ -306,19 +306,19 @@ int mode1_access_resource( const char *resource_name, EC_KEY **ec_key)
   cout<< "\nJSON_MESSAGE_RECIEVED : " << json_message << endl;
   json_length = strlen(json_message);
   //record r1 = make_pair(string(resource_name), string(json_message));  
-  string *res_name = new string(resource_name);
-  string *json_token = new string(json_message);
-  record r1 = make_pair(*res_name, *json_token);
-  resource_to_json.insert(r1);
+  string res_name = string(resource_name);
+  string json_token = string(json_message);
+  record r1 = make_pair(res_name, json_token);
+  resource_to_json.insert(r1);  
   }
   else {
   cout<<"\nLOAD_TOKEN_FROM_TABLE :\n";
-  json_message = (char *) malloc ((*iter).second.length());
+  json_message = (char *) malloc ((*iter).second.length()+1);
   strcpy(json_message, (*iter).second.c_str());
   json_length = strlen(json_message);
   //Insert Token Expiry Validation Check here 
   }
-
+  
   sign_token(ec_key, &sig, &sig_len, &json_message, &json_length);
   send_token(&sig, &sig_len, &json_message, &json_length);
   return 0;
@@ -353,7 +353,6 @@ int mode2_send_token_identifier(char **token_identifier)
     printf("Failed to read RESPONSE_LENGTH from socket\n");
   }
   cout << "RESPONSE : " << response <<endl;
-  close(soc);
   return 0;
 
 }
